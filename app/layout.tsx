@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
@@ -11,12 +11,12 @@ const geistMono = Geist_Mono({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Kawsaymi Care',
   description: 'Tu compañero de adherencia a medicamentos',
-  generator: 'v0.app',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    userScalable: true,
-  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  userScalable: true,
 }
 
 export default function RootLayout({

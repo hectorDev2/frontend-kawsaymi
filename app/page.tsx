@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Heart, Pill, BarChart3, Users } from 'lucide-react'
+import { Heart, Pill, BarChart3, Users, Shield, Clock, ArrowRight } from 'lucide-react'
 
 export default function RootPage() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -20,78 +20,158 @@ export default function RootPage() {
   if (isLoading) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-40">
-        <nav className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-lg">
-            <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-sm">
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
+        <nav className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl gradient-brand text-white flex items-center justify-center text-sm font-bold shadow-sm">
               KC
             </div>
-            Kawsaymi Care
+            <div>
+              <p className="font-bold text-sm leading-tight">Kawsaymi Care</p>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild>
               <Link href="/auth/login">Iniciar sesión</Link>
             </Button>
-            <Button asChild>
-              <Link href="/auth/signup">Comenzar</Link>
+            <Button size="sm" asChild className="shadow-sm">
+              <Link href="/auth/signup">Comenzar gratis</Link>
             </Button>
           </div>
         </nav>
       </header>
 
-      <section className="container mx-auto px-4 py-20 text-center">
-        <h1 className="text-5xl md:text-6xl font-bold mb-6 text-balance">
-          Tu Compañero de Adherencia a Medicamentos
+      {/* Hero */}
+      <section className="max-w-6xl mx-auto px-6 pt-20 pb-24 text-center">
+        <div className="inline-flex items-center gap-2 bg-primary/8 text-primary text-xs font-semibold px-3 py-1.5 rounded-full mb-6 border border-primary/20">
+          <Heart className="w-3.5 h-3.5" />
+          Tu salud, nuestra prioridad
+        </div>
+        <h1 className="text-5xl md:text-6xl font-bold mb-6 text-balance leading-[1.1] tracking-tight">
+          Tu compañero de
+          <span className="block text-primary">adherencia a medicamentos</span>
         </h1>
-        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto text-balance">
-          Kawsaymi Care te ayuda a mantenerte al día con tus medicamentos con recordatorios inteligentes, seguimiento fácil y apoyo de cuidadores.
+        <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed">
+          Kawsaymi Care te ayuda a mantenerte al día con tus medicamentos con recordatorios inteligentes y apoyo de cuidadores.
         </p>
-        <div className="flex gap-4 justify-center mb-16">
-          <Button size="lg" asChild>
-            <Link href="/auth/signup">Comenzar gratis</Link>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button size="lg" asChild className="shadow-md gap-2">
+            <Link href="/auth/signup">
+              Comenzar gratis
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link href="/auth/login">Iniciar sesión</Link>
+            <Link href="/auth/login">Ya tengo cuenta</Link>
           </Button>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
-          <div className="p-6 rounded-lg border border-border bg-card hover:shadow-lg transition-shadow">
-            <Pill className="w-12 h-12 mx-auto mb-4 text-primary" />
-            <h3 className="font-semibold mb-2">Seguimiento fácil</h3>
-            <p className="text-sm text-muted-foreground">Registrá tus medicamentos con un solo toque</p>
-          </div>
-          <div className="p-6 rounded-lg border border-border bg-card hover:shadow-lg transition-shadow">
-            <BarChart3 className="w-12 h-12 mx-auto mb-4 text-secondary" />
-            <h3 className="font-semibold mb-2">Análisis inteligente</h3>
-            <p className="text-sm text-muted-foreground">Seguí tu adherencia con datos detallados</p>
-          </div>
-          <div className="p-6 rounded-lg border border-border bg-card hover:shadow-lg transition-shadow">
-            <Users className="w-12 h-12 mx-auto mb-4 text-accent" />
-            <h3 className="font-semibold mb-2">Apoyo de cuidadores</h3>
-            <p className="text-sm text-muted-foreground">Compartí tu progreso con cuidadores de confianza</p>
-          </div>
-          <div className="p-6 rounded-lg border border-border bg-card hover:shadow-lg transition-shadow">
-            <Heart className="w-12 h-12 mx-auto mb-4 text-destructive" />
-            <h3 className="font-semibold mb-2">Enfoque en salud</h3>
-            <p className="text-sm text-muted-foreground">Diseñado pensando en el cuidado de la salud</p>
+        {/* Demo credentials hint */}
+        <div className="mt-8 inline-flex items-center gap-2 text-xs text-muted-foreground bg-muted px-4 py-2 rounded-full">
+          <Shield className="w-3.5 h-3.5" />
+          Demo: <strong>paciente@demo.com</strong> o <strong>cuidador@demo.com</strong> — contraseña: <strong>12345678</strong>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="bg-card border-y border-border py-20">
+        <div className="max-w-6xl mx-auto px-6">
+          <p className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-12">
+            Todo lo que necesitás para tu salud
+          </p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                icon: Pill,
+                title: 'Seguimiento fácil',
+                desc: 'Registrá tus medicamentos con un solo toque',
+                color: 'text-primary bg-primary/10',
+              },
+              {
+                icon: BarChart3,
+                title: 'Análisis inteligente',
+                desc: 'Seguí tu adherencia con datos detallados',
+                color: 'text-secondary bg-secondary/10',
+              },
+              {
+                icon: Users,
+                title: 'Apoyo de cuidadores',
+                desc: 'Compartí tu progreso con personas de confianza',
+                color: 'text-primary bg-primary/10',
+              },
+              {
+                icon: Clock,
+                title: 'Recordatorios',
+                desc: 'Nunca más olvidés tomar tu medicación',
+                color: 'text-secondary bg-secondary/10',
+              },
+            ].map((f) => (
+              <div key={f.title} className="p-6 rounded-xl border border-border bg-background hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 group">
+                <div className={`w-10 h-10 rounded-lg ${f.color} flex items-center justify-center mb-4`}>
+                  <f.icon className="w-5 h-5" />
+                </div>
+                <h3 className="font-semibold mb-1.5 text-sm">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="container mx-auto px-4 py-20 text-center">
-        <div className="bg-gradient-to-r from-primary to-secondary rounded-lg p-12 text-white">
-          <h2 className="text-3xl font-bold mb-4">¿Listo para tomar el control?</h2>
-          <p className="mb-8 text-white/90">Únete a miles de pacientes y cuidadores que gestionan mejor sus medicamentos.</p>
-          <Button size="lg" variant="secondary" asChild>
-            <Link href="/auth/signup">Crear cuenta gratis</Link>
+      {/* Benefits */}
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <h2 className="text-2xl font-bold mb-12 text-center">¿Por qué elegir Kawsaymi Care?</h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          {[
+            {
+              title: 'Para pacientes',
+              items: ['Recordatorios personalizados', 'Seguimiento diario de adherencia', 'Registro de datos de salud', 'Compartir datos con cuidadores'],
+            },
+            {
+              title: 'Para cuidadores',
+              items: ['Monitorear múltiples pacientes', 'Recibir alertas de adherencia', 'Seguir tendencias de salud', 'Comunicación segura'],
+            },
+            {
+              title: 'Para todos',
+              items: ['Completamente en español', 'Diseño optimizado para móvil', 'Privacidad garantizada', 'Soporte 24/7'],
+            },
+          ].map((col) => (
+            <div key={col.title} className="p-6 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-4 text-primary">{col.title}</h3>
+              <ul className="space-y-2.5">
+                {col.items.map((item) => (
+                  <li key={item} className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                    <div className="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="max-w-6xl mx-auto px-6 pb-24">
+        <div className="gradient-brand rounded-2xl p-12 text-center text-white">
+          <h2 className="text-2xl font-bold mb-3">¿Listo para tomar el control?</h2>
+          <p className="mb-8 text-white/80 max-w-md mx-auto">
+            Únete a miles de pacientes y cuidadores que gestionan mejor sus medicamentos.
+          </p>
+          <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90 shadow-md gap-2">
+            <Link href="/auth/signup">
+              Crear cuenta gratis
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </Button>
         </div>
       </section>
 
-      <footer className="border-t border-border mt-20 py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+      {/* Footer */}
+      <footer className="border-t border-border py-8">
+        <div className="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground">
           <p>&copy; 2024 Kawsaymi Care. Todos los derechos reservados.</p>
         </div>
       </footer>

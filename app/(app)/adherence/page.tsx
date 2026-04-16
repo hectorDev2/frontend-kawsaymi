@@ -1,121 +1,172 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { AdherenceChart } from '@/components/adherence-chart'
-import { Badge } from '@/components/ui/badge'
-import { TrendingUp } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { TrendingUp, CheckCircle2, XCircle, Clock, Activity } from 'lucide-react'
+import { api } from '@/lib/api'
+import type { AdherenceStats, MedicationEvent } from '@/lib/api'
 
-const MOCK_ADHERENCE_DATA = [
-  { date: 'Lun', adherence: 85, taken: 3, missed: 1 },
-  { date: 'Mar', adherence: 100, taken: 4, missed: 0 },
-  { date: 'Mié', adherence: 75, taken: 3, missed: 1 },
-  { date: 'Jue', adherence: 90, taken: 4, missed: 1 },
-  { date: 'Vie', adherence: 100, taken: 4, missed: 0 },
-  { date: 'Sáb', adherence: 80, taken: 3, missed: 1 },
-  { date: 'Dom', adherence: 95, taken: 4, missed: 0 },
-]
+const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+
+interface DayStat {
+  label: string
+  rate: number
+  taken: number
+  missed: number
+}
+
+function buildWeekStats(events: MedicationEvent[]): DayStat[] {
+  const today = new Date()
+  const days: DayStat[] = []
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    const dayKey = d.toDateString()
+    const dayEvents = events.filter((e) => new Date(e.dateTimeScheduled).toDateString() === dayKey)
+    const taken = dayEvents.filter((e) => e.status === 'TAKEN').length
+    const missed = dayEvents.filter((e) => e.status === 'MISSED').length
+    const total = dayEvents.length
+    days.push({
+      label: DAY_LABELS[d.getDay()],
+      rate: total > 0 ? Math.round((taken / total) * 100) : 0,
+      taken,
+      missed,
+    })
+  }
+  return days
+}
 
 export default function AdherencePage() {
-  const weeklyAverage = Math.round(
-    MOCK_ADHERENCE_DATA.reduce((sum, d) => sum + d.adherence, 0) / MOCK_ADHERENCE_DATA.length
-  )
+  const [week, setWeek] = useState<AdherenceStats | null>(null)
+  const [today, setToday] = useState<AdherenceStats | null>(null)
+  const [days, setDays] = useState<DayStat[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      api.getWeekAdherence(),
+      api.getTodayAdherence(),
+      api.getWeekEvents(),
+    ]).then(([w, t, evtRes]) => {
+      setWeek(w)
+      setToday(t)
+      setDays(buildWeekStats(evtRes.events ?? []))
+    }).finally(() => setLoading(false))
+  }, [])
+
+  const weekRate = week ? Math.round(week.adherenceRate * 100) : 0
+  const todayRate = today ? Math.round(today.adherenceRate * 100) : 0
+
+  const rateColor = (r: number) =>
+    r >= 80 ? 'bg-secondary' : r >= 50 ? 'bg-amber-500' : 'bg-destructive'
+
+  const rateLabel = (r: number) =>
+    r >= 80 ? 'Excelente' : r >= 50 ? 'Regular' : 'Necesita mejorar'
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Cumplimiento</h1>
-        <p className="text-muted-foreground mt-1">
-          Seguí tu adherencia a medicamentos y tendencias
-        </p>
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto md:mx-0">
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Mi adherencia</h1>
+        <p className="text-muted-foreground text-sm mt-1">Seguí tu cumplimiento de medicamentos</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-muted-foreground text-sm">Promedio semanal</p>
-                <p className="text-4xl font-bold mt-2">{weeklyAverage}%</p>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="card-elevated gradient-brand p-5 text-white">
+          <p className="text-white/80 text-sm font-medium mb-1">Esta semana</p>
+          {loading ? (
+            <div className="h-10 w-20 bg-white/20 rounded animate-pulse" />
+          ) : (
+            <>
+              <p className="text-4xl font-bold">{weekRate}%</p>
+              <div className="flex items-center gap-1 mt-1">
+                <TrendingUp className="w-4 h-4 text-white/80" />
+                <span className="text-white/80 text-xs font-medium">{rateLabel(weekRate)}</span>
               </div>
-              <Badge className="bg-green-100 text-green-900">
-                <TrendingUp className="w-3 h-3 mr-1" />
-                Bien
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-2">
-              <p className="text-muted-foreground text-sm">Esta semana</p>
-              <div className="flex gap-2 mt-2">
-                {[85, 100, 75, 90, 100, 80, 95].map((rate, i) => (
+            </>
+          )}
+        </div>
+        <div className="card-elevated p-5">
+          <p className="text-muted-foreground text-sm font-medium mb-1">Hoy</p>
+          {loading ? (
+            <div className="h-10 w-20 bg-muted rounded animate-pulse" />
+          ) : (
+            <>
+              <p className="text-4xl font-bold text-primary">{todayRate}%</p>
+              <p className="text-xs text-muted-foreground mt-1">{today?.taken ?? 0} de {today?.total ?? 0} tomados</p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Week bar chart */}
+      <div className="card-elevated p-5 mb-6">
+        <h2 className="font-bold text-base mb-4 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-primary" />
+          Últimos 7 días
+        </h2>
+        {loading ? (
+          <div className="h-24 bg-muted rounded animate-pulse" />
+        ) : (
+          <div className="flex items-end gap-2 h-28">
+            {days.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
                   <div
-                    key={i}
-                    className="flex-1 h-12 rounded-sm flex items-end justify-center"
-                    style={{
-                      backgroundColor: `hsl(${rate >= 80 ? '142, 76%, 36%' : '40, 96%, 40%'})`,
-                      opacity: 0.8,
-                    }}
-                  >
-                    <span className="text-xs font-semibold text-white">{rate}%</span>
-                  </div>
-                ))}
+                    className={`w-full rounded-t-lg transition-all ${rateColor(d.rate)}`}
+                    style={{ height: `${Math.max(d.rate, 4)}%` }}
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">{d.label}</span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-3">
-              <div>
-                <p className="text-muted-foreground text-xs">Dosis tomadas</p>
-                <p className="text-2xl font-bold">27</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Dosis perdidas</p>
-                <p className="text-2xl font-bold text-red-600">4</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="space-y-6">
-        <AdherenceChart
-          data={MOCK_ADHERENCE_DATA}
-          type="line"
-          title="Tendencia de adherencia semanal"
-          description="Tu tasa de adherencia durante la última semana"
-        />
-        <AdherenceChart
-          data={MOCK_ADHERENCE_DATA}
-          type="bar"
-          title="Dosis tomadas vs perdidas"
-          description="Desglose diario de medicamentos"
-        />
+      {/* Stats detail */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="card-elevated p-4 text-center">
+          <CheckCircle2 className="w-6 h-6 text-secondary mx-auto mb-1" />
+          <p className="text-2xl font-bold text-secondary">{loading ? '–' : week?.taken ?? 0}</p>
+          <p className="text-xs text-muted-foreground font-medium">Tomadas</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <XCircle className="w-6 h-6 text-destructive mx-auto mb-1" />
+          <p className="text-2xl font-bold text-destructive">{loading ? '–' : week?.missed ?? 0}</p>
+          <p className="text-xs text-muted-foreground font-medium">Perdidas</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <Clock className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+          <p className="text-2xl font-bold text-amber-600">{loading ? '–' : week?.pending ?? 0}</p>
+          <p className="text-xs text-muted-foreground font-medium">Pendientes</p>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Análisis de salud</CardTitle>
-          <CardDescription>Basado en tus patrones de adherencia</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-            <p className="text-sm font-semibold text-blue-900">¡Excelente consistencia!</p>
-            <p className="text-sm text-blue-800 mt-1">
-              Mantuviste un promedio de {weeklyAverage}% de adherencia esta semana. ¡Seguí así!
+      {/* Tips */}
+      <div className="card-elevated p-5 space-y-4">
+        <h2 className="font-bold text-base">Consejos</h2>
+        {weekRate >= 80 ? (
+          <div className="p-4 rounded-xl bg-secondary/10 border border-secondary/20">
+            <p className="text-sm font-semibold text-secondary">¡Excelente consistencia!</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Mantuviste un {weekRate}% de adherencia esta semana. ¡Seguí así!
             </p>
           </div>
-          <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
-            <p className="text-sm font-semibold text-amber-900">Los recordatorios pueden ayudar</p>
+        ) : (
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-sm font-semibold text-amber-900">Podés mejorar</p>
             <p className="text-sm text-amber-800 mt-1">
-              Considerá activar las notificaciones para que te recuerde tus medicamentos en los horarios pautados.
+              Tu adherencia esta semana fue del {weekRate}%. Intentá tomar tus medicamentos siempre a la misma hora.
             </p>
           </div>
-        </CardContent>
-      </Card>
+        )}
+        <div className="p-4 rounded-xl bg-primary/5 border border-primary/15">
+          <p className="text-sm font-semibold text-primary">Activá los recordatorios</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Los recordatorios en el horario justo te ayudan a no olvidar ninguna toma.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
