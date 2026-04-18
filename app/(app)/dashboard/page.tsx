@@ -5,7 +5,12 @@ import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
 import type { MedicationEvent, AdherenceStats } from '@/lib/api'
 import Link from 'next/link'
-import { CheckCircle2, Clock, Circle, ChevronRight, Users, AlertCircle, Activity, Heart, Pill } from 'lucide-react'
+import { CheckCircle2, Clock, Circle, ChevronRight, Users, AlertCircle, Activity, Heart, Pill, Sparkles } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
+import { useToast } from '@/hooks/use-toast'
 
 // ─── Circular Progress ───────────────────────────────────────────────────────
 
@@ -36,12 +41,226 @@ const STATUS = {
   MISSED: { label: 'Perdido', icon: Circle, color: 'text-destructive', badge: 'bg-destructive/10 text-destructive' },
 }
 
+function adherenceTipCacheKey(stats: { taken: number; total: number; missed: number; pending: number }) {
+  return `kw_ai_tip:v1:adherence:today:${stats.taken}:${stats.total}:${stats.missed}:${stats.pending}`
+}
+
+function DashboardAdherenceTip({ stats }: { stats: { taken: number; total: number; missed: number; pending: number; adherenceRate?: number } }) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [tip, setTip] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = async (opts?: { force?: boolean }) => {
+    const key = adherenceTipCacheKey(stats)
+    if (!opts?.force) {
+      const cached = getCachedTip(key)
+      if (cached) {
+        setTip(cached)
+        setError(null)
+        return
+      }
+    }
+
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/ai-adherence-tip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'today', ...stats }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo generar el tip')
+      const text = (data?.tip ?? '').toString().trim()
+      const finalText = text || 'No pude generar un tip por ahora.'
+      setTip(finalText)
+      setCachedTip(key, finalText)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error de conexión')
+      setTip(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (next && !tip && !loading && !error) load()
+      }}
+    >
+      <Tooltip>
+        <PopoverTrigger asChild>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon-sm"
+              className="rounded-full bg-white/15 text-white hover:bg-white/20 hover:text-white"
+              aria-label="Ver tip de hoy"
+            >
+              <Sparkles className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+        </PopoverTrigger>
+        <TooltipContent sideOffset={6}>Ver tip</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-80">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold leading-tight">Tip</p>
+            <p className="text-xs text-muted-foreground">Para hoy</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            disabled={loading}
+            onClick={() => load({ force: true })}
+          >
+            {loading ? 'Generando...' : 'Otro'}
+          </Button>
+        </div>
+        <div className="mt-3 text-sm">
+          {loading ? (
+            <p className="text-muted-foreground">Generando tip...</p>
+          ) : error ? (
+            <p className="text-destructive">{error}</p>
+          ) : (
+            <p className="leading-relaxed">{tip}</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function eventTipCacheKey(input: { eventId: string; scheduledIso: string; status: string }) {
+  return `kw_ai_tip:v1:event:${input.eventId}:${input.status}:${input.scheduledIso}`
+}
+
+function EventDoseTip({
+  eventId,
+  medicationName,
+  dose,
+  scheduledIso,
+  scheduledLabel,
+}: {
+  eventId: string
+  medicationName: string
+  dose: string
+  scheduledIso: string
+  scheduledLabel: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [tip, setTip] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = async (opts?: { force?: boolean }) => {
+    const key = eventTipCacheKey({ eventId, scheduledIso, status: 'PENDING' })
+    if (!opts?.force) {
+      const cached = getCachedTip(key)
+      if (cached) {
+        setTip(cached)
+        setError(null)
+        return
+      }
+    }
+
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/ai-dose-tip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          medicationName,
+          dose,
+          scheduledTime: scheduledLabel,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo generar el tip')
+      const text = (data?.tip ?? '').toString().trim()
+      const finalText = text || 'No pude generar un tip por ahora.'
+      setTip(finalText)
+      setCachedTip(key, finalText)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error de conexión')
+      setTip(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (next && !tip && !loading && !error) load()
+      }}
+    >
+      <Tooltip>
+        <PopoverTrigger asChild>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full"
+              aria-label={`Ver tip para ${medicationName}`}
+            >
+              <Sparkles className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+        </PopoverTrigger>
+        <TooltipContent sideOffset={6}>Ver tip</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-80">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold leading-tight">Tip</p>
+            <p className="text-xs text-muted-foreground">Para {medicationName}</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            disabled={loading}
+            onClick={() => load({ force: true })}
+          >
+            {loading ? 'Generando...' : 'Otro'}
+          </Button>
+        </div>
+        <div className="mt-3 text-sm">
+          {loading ? (
+            <p className="text-muted-foreground">Generando tip...</p>
+          ) : error ? (
+            <p className="text-destructive">{error}</p>
+          ) : (
+            <p className="leading-relaxed">{tip}</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 // ─── Patient Dashboard ───────────────────────────────────────────────────────
 
 function PatientDashboard({ user }: { user: any }) {
+  const { toast } = useToast()
   const [events, setEvents] = useState<MedicationEvent[]>([])
   const [adherence, setAdherence] = useState<AdherenceStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [demoTaken, setDemoTaken] = useState(false)
 
   useEffect(() => {
     Promise.all([api.getTodayEvents(), api.getTodayAdherence()])
@@ -62,9 +281,20 @@ function PatientDashboard({ user }: { user: any }) {
     setAdherence(adh)
   }
 
-  const progress = adherence ? Math.round(adherence.adherenceRate * 100) : 0
-  const taken = adherence?.taken ?? 0
-  const total = adherence?.total ?? 0
+  const demoAdh: AdherenceStats = {
+    taken: demoTaken ? 1 : 0,
+    total: 1,
+    pending: demoTaken ? 0 : 1,
+    missed: 0,
+    adherenceRate: demoTaken ? 1 : 0,
+    activeMedications: 1,
+  }
+
+  const effectiveAdherence = !loading && events.length === 0 ? demoAdh : adherence
+
+  const progress = effectiveAdherence ? Math.round(effectiveAdherence.adherenceRate * 100) : 0
+  const taken = effectiveAdherence?.taken ?? 0
+  const total = effectiveAdherence?.total ?? 0
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
@@ -77,7 +307,25 @@ function PatientDashboard({ user }: { user: any }) {
       <div className="card-elevated gradient-brand p-6 mb-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 text-white">
-            <p className="text-white/80 text-sm font-medium mb-1">Progreso del día</p>
+              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <p className="text-white/80 text-sm font-medium mb-1">Progreso del día</p>
+                {!loading && events.length === 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/15 text-white/90">DEMO</span>
+                )}
+              </div>
+              {!loading && effectiveAdherence && (
+                <DashboardAdherenceTip
+                  stats={{
+                    taken: effectiveAdherence.taken,
+                    total: effectiveAdherence.total,
+                    missed: effectiveAdherence.missed,
+                    pending: effectiveAdherence.pending,
+                    adherenceRate: effectiveAdherence.adherenceRate,
+                  }}
+                />
+              )}
+              </div>
             {loading ? (
               <div className="h-6 w-48 bg-white/20 rounded animate-pulse" />
             ) : (
@@ -121,6 +369,53 @@ function PatientDashboard({ user }: { user: any }) {
             <Link href="/medications" className="text-primary text-sm font-semibold hover:underline mt-2 block">
               Agregar medicamento
             </Link>
+
+            {/* Demo para probar Tip (B) cuando no hay eventos */}
+            <div className="mt-6 text-left">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Ejemplo (demo)</p>
+              <div className="card-elevated border overflow-hidden">
+                <div className="p-4 flex items-center gap-4">
+                  <div className="text-center w-14 flex-shrink-0">
+                    <p className="text-lg font-bold leading-none">08:00</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">hs</p>
+                  </div>
+                  <div className="w-px h-10 bg-border flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-base truncate text-foreground">Metformina</p>
+                    <p className="text-sm text-muted-foreground">500mg</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <EventDoseTip
+                      eventId="demo-event"
+                      medicationName="Metformina"
+                      dose="500mg"
+                      scheduledIso={new Date().toISOString()}
+                      scheduledLabel="08:00"
+                    />
+                    {demoTaken ? (
+                      <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full bg-secondary/10 text-secondary">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Tomado
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDemoTaken(true)
+                          toast({
+                            title: 'Demo',
+                            description: 'Marcado como tomado (solo para prueba).',
+                          })
+                        }}
+                        className="bg-primary text-primary-foreground text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-primary/90 active:scale-95 transition-all"
+                      >
+                        Tomar ahora
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -148,12 +443,21 @@ function PatientDashboard({ user }: { user: any }) {
                       <p className="text-sm text-muted-foreground">{evt.medicationDose}</p>
                     </div>
                     {isDue ? (
-                      <button
-                        onClick={() => handleMark(evt.id, 'taken')}
-                        className="flex-shrink-0 bg-primary text-primary-foreground text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-primary/90 active:scale-95 transition-all"
-                      >
-                        Tomar ahora
-                      </button>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <EventDoseTip
+                          eventId={evt.id}
+                          medicationName={evt.medicationName ?? ''}
+                          dose={evt.medicationDose ?? ''}
+                          scheduledIso={evt.dateTimeScheduled}
+                          scheduledLabel={time}
+                        />
+                        <button
+                          onClick={() => handleMark(evt.id, 'taken')}
+                          className="bg-primary text-primary-foreground text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-primary/90 active:scale-95 transition-all"
+                        >
+                          Tomar ahora
+                        </button>
+                      </div>
                     ) : (
                       <span className={`flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full ${cfg.badge}`}>
                         <Icon className="w-4 h-4" />

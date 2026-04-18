@@ -1,9 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2, XCircle, Clock, Smile, AlertCircle, Pill } from 'lucide-react'
+import { CheckCircle2, XCircle, Clock, Smile, AlertCircle, Pill, Sparkles } from 'lucide-react'
 import { api } from '@/lib/api'
 import type { AdherenceStats, MedicationEvent } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
 
 const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
@@ -41,6 +45,110 @@ function barColor(rate: number) {
   return 'bg-destructive'
 }
 
+function adherenceTipCacheKey(scope: 'week' | 'today', stats: { taken: number; total: number; missed: number; pending: number }) {
+  return `kw_ai_tip:v1:adherence:${scope}:${stats.taken}:${stats.total}:${stats.missed}:${stats.pending}`
+}
+
+function AdherenceTip({
+  scope,
+  stats,
+}: {
+  scope: 'week' | 'today'
+  stats: { taken: number; total: number; missed: number; pending: number; adherenceRate?: number }
+}) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [tip, setTip] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = async (opts?: { force?: boolean }) => {
+    const key = adherenceTipCacheKey(scope, stats)
+    if (!opts?.force) {
+      const cached = getCachedTip(key)
+      if (cached) {
+        setTip(cached)
+        setError(null)
+        return
+      }
+    }
+
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/ai-adherence-tip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope, ...stats }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo generar el tip')
+      const text = (data?.tip ?? '').toString().trim()
+      const finalText = text || 'No pude generar un tip por ahora.'
+      setTip(finalText)
+      setCachedTip(key, finalText)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error de conexión')
+      setTip(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (next && !tip && !loading && !error) load()
+      }}
+    >
+      <Tooltip>
+        <PopoverTrigger asChild>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant={scope === 'week' ? 'secondary' : 'ghost'}
+              size="icon-sm"
+              className={scope === 'week' ? 'rounded-full bg-white/15 text-white hover:bg-white/20 hover:text-white' : 'rounded-full'}
+              aria-label={scope === 'week' ? 'Ver tip de la semana' : 'Ver tip de hoy'}
+            >
+              <Sparkles className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+        </PopoverTrigger>
+        <TooltipContent sideOffset={6}>Ver tip</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-80">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold leading-tight">Tip</p>
+            <p className="text-xs text-muted-foreground">{scope === 'week' ? 'Esta semana' : 'Hoy'}</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            disabled={loading}
+            onClick={() => load({ force: true })}
+          >
+            {loading ? 'Generando...' : 'Otro'}
+          </Button>
+        </div>
+        <div className="mt-3 text-sm">
+          {loading ? (
+            <p className="text-muted-foreground">Generando tip...</p>
+          ) : error ? (
+            <p className="text-destructive">{error}</p>
+          ) : (
+            <p className="leading-relaxed">{tip}</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export default function AdherencePage() {
   const [week, setWeek] = useState<AdherenceStats | null>(null)
   const [today, setToday] = useState<AdherenceStats | null>(null)
@@ -71,7 +179,15 @@ export default function AdherencePage() {
       {/* Resumen principal */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="card-elevated gradient-brand p-5 text-white">
-          <p className="text-white/80 text-sm font-medium mb-2">Esta semana tomé</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-white/80 text-sm font-medium mb-2">Esta semana tomé</p>
+            {!loading && week && (
+              <AdherenceTip
+                scope="week"
+                stats={{ taken: week.taken, total: week.total, missed: week.missed, pending: week.pending, adherenceRate: week.adherenceRate }}
+              />
+            )}
+          </div>
           {loading ? (
             <div className="h-10 w-28 bg-white/20 rounded animate-pulse" />
           ) : (
@@ -84,7 +200,15 @@ export default function AdherencePage() {
           )}
         </div>
         <div className="card-elevated p-5">
-          <p className="text-muted-foreground text-sm font-medium mb-2">Hoy tomé</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-muted-foreground text-sm font-medium mb-2">Hoy tomé</p>
+            {!loading && today && (
+              <AdherenceTip
+                scope="today"
+                stats={{ taken: today.taken, total: today.total, missed: today.missed, pending: today.pending, adherenceRate: today.adherenceRate }}
+              />
+            )}
+          </div>
           {loading ? (
             <div className="h-10 w-20 bg-muted rounded animate-pulse" />
           ) : (
