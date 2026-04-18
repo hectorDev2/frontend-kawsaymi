@@ -94,7 +94,7 @@ export default function MedicationsPage() {
   const missed = items.filter((i) => i.dominantStatus === 'MISSED').length
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto md:mx-0">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Mis medicamentos</h1>

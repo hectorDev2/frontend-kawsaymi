@@ -29,11 +29,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      // Intenta obtener el perfil del usuario actual
       const { user: profile } = await api.getMe()
+      // Preserve role from localStorage if the API doesn't return it
+      if (!profile.role) {
+        const stored = typeof window !== 'undefined'
+          ? localStorage.getItem(CURRENT_USER_KEY)
+          : null
+        const storedUser = stored ? JSON.parse(stored) : null
+        if (storedUser?.role) (profile as any).role = storedUser.role
+      }
       setUser(profile as any)
     } catch {
-      // Si falla (no hay token), limpia el estado
       setUser(null)
     }
   }, [])

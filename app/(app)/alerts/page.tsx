@@ -85,7 +85,7 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6 px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold">Alertas</h1>
         <p className="text-muted-foreground mt-1">

@@ -38,7 +38,7 @@ export default function PatientDetailPage() {
   const params = useParams()
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6 px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
         <Link href="/patients">
           <Button variant="ghost" size="icon">

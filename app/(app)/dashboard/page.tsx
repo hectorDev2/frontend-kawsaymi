@@ -67,7 +67,7 @@ function PatientDashboard({ user }: { user: any }) {
   const total = adherence?.total ?? 0
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto md:mx-0">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
       <div className="mb-6">
         <p className="text-muted-foreground text-base">Buenos días 👋</p>
         <h1 className="text-2xl md:text-3xl font-bold mt-0.5">{user?.name}</h1>
@@ -210,7 +210,7 @@ function PatientDashboard({ user }: { user: any }) {
 
 function CaregiverDashboard({ user }: { user: any }) {
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto md:mx-0">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
       <div className="mb-6">
         <p className="text-muted-foreground text-base">Buenos días 👋</p>
         <h1 className="text-2xl md:text-3xl font-bold mt-0.5">{user?.name}</h1>

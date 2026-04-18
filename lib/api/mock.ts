@@ -200,6 +200,7 @@ function userToProfile(u: StoredUser): UserProfile {
     id: u.id,
     email: u.email,
     name: u.name,
+    role: u.role,
     dateOfBirth: u.dateOfBirth,
     location: u.location,
     language: u.language,

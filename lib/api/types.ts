@@ -36,6 +36,7 @@ export interface UserProfile {
   id: string
   email: string
   name: string
+  role?: 'PATIENT' | 'CAREGIVER'
   dateOfBirth?: string
   location?: string
   language?: string

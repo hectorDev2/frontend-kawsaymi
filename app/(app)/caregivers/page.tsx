@@ -65,7 +65,7 @@ export default function CaregiversPage() {
   const [inviteEmail, setInviteEmail] = useState('')
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6 px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Mis cuidadores</h1>

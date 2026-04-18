@@ -15,6 +15,14 @@ export default function HealthDataPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [weight, setWeight] = useState('')
+  const [height, setHeight] = useState('')
+
+  const imcPreview = (() => {
+    const w = parseFloat(weight)
+    const h = parseFloat(height)
+    if (w > 0 && h > 0) return w / Math.pow(h / 100, 2)
+    return null
+  })()
 
   useEffect(() => {
     Promise.all([api.getHealthProfile(), api.getPolypharmacy()])
@@ -22,6 +30,7 @@ export default function HealthDataPage() {
         setHealth(hRes.health)
         setPoly(p)
         if (hRes.health.weight) setWeight(String(hRes.health.weight))
+        if (hRes.health.height) setHeight(String(hRes.health.height))
       })
       .finally(() => setLoading(false))
   }, [])
@@ -45,7 +54,7 @@ export default function HealthDataPage() {
   }
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto md:mx-0">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">Datos de salud</h1>
         <p className="text-muted-foreground text-sm mt-1">Registrá y seguí tus mediciones</p>
@@ -63,7 +72,9 @@ export default function HealthDataPage() {
         <div className="card-elevated p-4 text-center">
           <Activity className="w-6 h-6 text-secondary mx-auto mb-1" />
           <p className="text-2xl font-bold">
-            {loading ? '–' : health?.imc ? health.imc.toFixed(1) : '–'}
+            {imcPreview !== null
+              ? imcPreview.toFixed(1)
+              : loading ? '–' : health?.imc ? health.imc.toFixed(1) : '–'}
           </p>
           <p className="text-xs text-muted-foreground font-medium">IMC</p>
         </div>
@@ -86,17 +97,17 @@ export default function HealthDataPage() {
         </div>
       )}
 
-      {/* Weight update */}
+      {/* Weight + Height update */}
       <div className="card-elevated p-5 mb-6">
         <h2 className="font-bold text-base mb-4 flex items-center gap-2">
           <Weight className="w-5 h-5 text-primary" />
-          Actualizar peso
+          Actualizar medidas
         </h2>
-        <div className="flex gap-3">
-          <div className="flex-1">
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
             <Input
               type="number"
-              placeholder="Ej: 72.5"
+              placeholder="Peso"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               className="h-14 text-base rounded-xl"
@@ -105,15 +116,32 @@ export default function HealthDataPage() {
             />
             <p className="text-xs text-muted-foreground mt-1">kilogramos</p>
           </div>
-          <Button
-            onClick={handleSaveWeight}
-            disabled={saving || !weight}
-            className="h-14 px-5 rounded-xl gap-2 self-start"
-          >
-            <Save className="w-5 h-5" />
-            {saving ? 'Guardando...' : 'Guardar'}
-          </Button>
+          <div>
+            <Input
+              type="number"
+              placeholder="Altura"
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              className="h-14 text-base rounded-xl"
+              step="1"
+              min="0"
+            />
+            <p className="text-xs text-muted-foreground mt-1">centímetros</p>
+          </div>
         </div>
+        {imcPreview !== null && (
+          <div className="mb-3 px-4 py-2.5 rounded-xl bg-primary/8 border border-primary/20 text-sm text-primary font-medium">
+            IMC calculado: <span className="font-bold">{imcPreview.toFixed(1)}</span>
+          </div>
+        )}
+        <Button
+          onClick={handleSaveWeight}
+          disabled={saving || !weight}
+          className="w-full h-12 rounded-xl gap-2"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Guardando...' : 'Guardar'}
+        </Button>
       </div>
 
       {/* IMC info */}
