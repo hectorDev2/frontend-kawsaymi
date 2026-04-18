@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Heart, Pill, BarChart3, Users, Shield, Clock, ArrowRight } from 'lucide-react'
 
 export default function RootPage() {
@@ -23,20 +24,16 @@ export default function RootPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
-        <nav className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl gradient-brand text-white flex items-center justify-center text-sm font-bold shadow-sm">
-              KC
-            </div>
-            <div>
-              <p className="font-bold text-sm leading-tight">Kawsaymi Care</p>
-            </div>
+        <nav className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <Image src="/logo.png" alt="Kawsaymi Care" width={40} height={40} className="object-contain shrink-0" />
+            <p className="font-bold text-sm leading-tight truncate">Kawsaymi Care</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/auth/login">Iniciar sesión</Link>
             </Button>
-            <Button size="sm" asChild className="shadow-sm">
+            <Button size="sm" asChild className="shadow-sm hidden sm:inline-flex">
               <Link href="/auth/signup">Comenzar gratis</Link>
             </Button>
           </div>
@@ -44,16 +41,16 @@ export default function RootPage() {
       </header>
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-24 text-center">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 sm:pt-20 pb-16 sm:pb-24 text-center">
         <div className="inline-flex items-center gap-2 bg-primary/8 text-primary text-xs font-semibold px-3 py-1.5 rounded-full mb-6 border border-primary/20">
           <Heart className="w-3.5 h-3.5" />
           Tu salud, nuestra prioridad
         </div>
-        <h1 className="text-5xl md:text-6xl font-bold mb-6 text-balance leading-[1.1] tracking-tight">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 text-balance leading-[1.15] sm:leading-[1.1] tracking-tight">
           Tu compañero de
           <span className="block text-primary">adherencia a medicamentos</span>
         </h1>
-        <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed">
+        <p className="text-base sm:text-lg text-muted-foreground mb-8 sm:mb-10 max-w-xl mx-auto leading-relaxed">
           Kawsaymi Care te ayuda a mantenerte al día con tus medicamentos con recordatorios inteligentes y apoyo de cuidadores.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -69,9 +66,15 @@ export default function RootPage() {
         </div>
 
         {/* Demo credentials hint */}
-        <div className="mt-8 inline-flex items-center gap-2 text-xs text-muted-foreground bg-muted px-4 py-2 rounded-full">
-          <Shield className="w-3.5 h-3.5" />
-          Demo: <strong>paciente@demo.com</strong> o <strong>cuidador@demo.com</strong> — contraseña: <strong>12345678</strong>
+        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap justify-center items-center gap-1 sm:gap-x-1.5 text-xs text-muted-foreground bg-muted px-4 py-3 rounded-2xl max-w-sm sm:max-w-full mx-auto">
+          <span className="flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 shrink-0" />
+            <span>Demo:</span>
+          </span>
+          <strong>paciente@demo.com</strong>
+          <span className="hidden sm:inline">o</span>
+          <strong>cuidador@demo.com</strong>
+          <span>— contraseña: <strong>12345678</strong></span>
         </div>
       </section>
 
@@ -143,7 +146,7 @@ export default function RootPage() {
               <ul className="space-y-2.5">
                 {col.items.map((item) => (
                   <li key={item} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                    <div className="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
                     {item}
                   </li>
                 ))}
