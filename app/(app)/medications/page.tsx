@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2, XCircle, Clock, Plus, Search, Pill } from 'lucide-react'
+import { CheckCircle2, XCircle, Clock, Plus, Search, Pill, Sparkles } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
+import { buildTipCacheKey, getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
 import type { Medication, MedicationEvent } from '@/lib/api'
 import Link from 'next/link'
 
@@ -30,6 +33,110 @@ function freqLabel(n: number) {
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+function MedicationTip({
+  medicationId,
+  medicationName,
+  dose,
+}: {
+  medicationId?: string
+  medicationName: string
+  dose: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [suggestion, setSuggestion] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadTip = async (opts?: { force?: boolean }) => {
+    const key = buildTipCacheKey({ medicationId, medicationName, dose })
+    if (!opts?.force) {
+      const cached = getCachedTip(key)
+      if (cached) {
+        setSuggestion(cached)
+        setError(null)
+        return
+      }
+    }
+
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/ai-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ medicationName, dose }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo generar el tip')
+
+      const text = (data?.suggestion ?? '').toString().trim()
+      const finalText = text || 'No pude generar un tip por ahora.'
+      setSuggestion(finalText)
+      setCachedTip(key, finalText)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error de conexión')
+      setSuggestion(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (next && !suggestion && !loading && !error) loadTip()
+  }
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <Tooltip>
+        <PopoverTrigger asChild>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full"
+              aria-label={`Ver tip para ${medicationName}`}
+            >
+              <Sparkles className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+        </PopoverTrigger>
+        <TooltipContent sideOffset={6}>Ver tip</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-80">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold leading-tight">Tip</p>
+            <p className="text-xs text-muted-foreground">Para {medicationName}</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            disabled={loading}
+            onClick={() => loadTip({ force: true })}
+          >
+            {loading ? 'Generando...' : 'Otro'}
+          </Button>
+        </div>
+
+        <div className="mt-3 text-sm text-foreground">
+          {loading ? (
+            <p className="text-muted-foreground">Generando tip...</p>
+          ) : error ? (
+            <p className="text-destructive">{error}</p>
+          ) : (
+            <p className="leading-relaxed">{suggestion}</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 type EventStatus = 'PENDING' | 'TAKEN' | 'MISSED'
@@ -179,15 +286,18 @@ export default function MedicationsPage() {
                         <p className="font-bold text-lg leading-tight">{med.name}</p>
                         <p className="text-base text-muted-foreground">{med.dose} · {freqLabel(med.frequency)}</p>
                       </div>
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${
-                        dominantStatus === 'TAKEN'
-                          ? 'bg-secondary/10 text-secondary'
-                          : dominantStatus === 'MISSED'
-                          ? 'bg-destructive/10 text-destructive'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {STATUS_LABEL[dominantStatus]}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                          dominantStatus === 'TAKEN'
+                            ? 'bg-secondary/10 text-secondary'
+                            : dominantStatus === 'MISSED'
+                            ? 'bg-destructive/10 text-destructive'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {STATUS_LABEL[dominantStatus]}
+                        </span>
+                        <MedicationTip medicationId={med.id} medicationName={med.name} dose={med.dose} />
+                      </div>
                     </div>
                     {events.length > 0 && (
                       <div className="flex gap-2 mt-2 flex-wrap">

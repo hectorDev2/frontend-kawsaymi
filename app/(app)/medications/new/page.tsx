@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
+import { buildTipCacheKey, getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
 import Link from 'next/link'
 
 const FREQ_OPTIONS = [
@@ -44,6 +45,16 @@ export default function NewMedicationPage() {
       setAiError('Primero escribí el nombre del medicamento')
       return
     }
+
+     const conditions = ((user as any)?.conditions ?? []) as string[]
+     const cacheKey = buildTipCacheKey({ medicationName: name, dose: dose || undefined, conditions })
+     const cached = getCachedTip(cacheKey)
+     if (cached) {
+       setInstructions(cached)
+       setAiError('')
+       return
+     }
+
     setAiError('')
     setAiLoading(true)
     try {
@@ -53,12 +64,13 @@ export default function NewMedicationPage() {
         body: JSON.stringify({
           medicationName: name,
           dose: dose || undefined,
-          conditions: (user as any)?.conditions ?? [],
+          conditions,
         }),
       })
       const data = await res.json()
       if (data.suggestion) {
         setInstructions(data.suggestion)
+        setCachedTip(cacheKey, data.suggestion)
       } else {
         setAiError('No se pudo obtener sugerencia')
       }
