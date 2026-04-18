@@ -8,6 +8,19 @@ import { api } from '@/lib/api'
 import type { HealthProfile, PolypharmacyInfo } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
+function imcCategory(imc: number) {
+  if (imc < 18.5) {
+    return { label: 'Desnutrición', tone: 'text-destructive' }
+  }
+  if (imc < 25) {
+    return { label: 'Normal', tone: 'text-secondary' }
+  }
+  if (imc < 30) {
+    return { label: 'Sobrepeso', tone: 'text-amber-700' }
+  }
+  return { label: 'Obesidad', tone: 'text-destructive' }
+}
+
 export default function HealthDataPage() {
   const { toast } = useToast()
   const [health, setHealth] = useState<HealthProfile | null>(null)
@@ -23,6 +36,9 @@ export default function HealthDataPage() {
     if (w > 0 && h > 0) return w / Math.pow(h / 100, 2)
     return null
   })()
+
+  const imcValue = imcPreview !== null ? imcPreview : (health?.imc ?? null)
+  const imcCat = imcValue !== null ? imcCategory(imcValue) : null
 
   useEffect(() => {
     Promise.all([api.getHealthProfile(), api.getPolypharmacy()])
@@ -77,6 +93,9 @@ export default function HealthDataPage() {
               : loading ? '–' : health?.imc ? health.imc.toFixed(1) : '–'}
           </p>
           <p className="text-xs text-muted-foreground font-medium">IMC</p>
+          {!loading && imcCat && (
+            <p className={`text-xs font-semibold mt-1 ${imcCat.tone}`}>{imcCat.label}</p>
+          )}
         </div>
         <div className="card-elevated p-4 text-center">
           <Pill className="w-6 h-6 text-amber-500 mx-auto mb-1" />
@@ -132,6 +151,9 @@ export default function HealthDataPage() {
         {imcPreview !== null && (
           <div className="mb-3 px-4 py-2.5 rounded-xl bg-primary/8 border border-primary/20 text-sm text-primary font-medium">
             IMC calculado: <span className="font-bold">{imcPreview.toFixed(1)}</span>
+            {imcCat && (
+              <span className={`ml-2 font-bold ${imcCat.tone}`}>({imcCat.label})</span>
+            )}
           </div>
         )}
         <Button
@@ -145,14 +167,19 @@ export default function HealthDataPage() {
       </div>
 
       {/* IMC info */}
-      {!loading && health?.imc && (
+      {!loading && imcValue !== null && (
         <div className="card-elevated p-5 mb-6">
           <h2 className="font-bold text-base mb-3">¿Qué significa tu IMC?</h2>
+          {imcCat && (
+            <p className="text-sm text-muted-foreground mb-3">
+              Según tu IMC, estás en: <span className={`font-bold ${imcCat.tone}`}>{imcCat.label}</span>
+            </p>
+          )}
           {[
-            { label: 'Bajo peso', range: '< 18.5', active: health.imc < 18.5 },
-            { label: 'Normal', range: '18.5 – 24.9', active: health.imc >= 18.5 && health.imc < 25 },
-            { label: 'Sobrepeso', range: '25 – 29.9', active: health.imc >= 25 && health.imc < 30 },
-            { label: 'Obesidad', range: '≥ 30', active: health.imc >= 30 },
+            { label: 'Desnutrición', range: '< 18.5', active: imcValue < 18.5 },
+            { label: 'Normal', range: '18.5 – 24.9', active: imcValue >= 18.5 && imcValue < 25 },
+            { label: 'Sobrepeso', range: '25 – 29.9', active: imcValue >= 25 && imcValue < 30 },
+            { label: 'Obesidad', range: '≥ 30', active: imcValue >= 30 },
           ].map((row) => (
             <div key={row.label} className={`flex items-center justify-between py-2.5 px-3 rounded-lg mb-1 ${
               row.active ? 'bg-primary/10 font-semibold' : ''
