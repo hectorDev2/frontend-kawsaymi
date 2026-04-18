@@ -3,7 +3,8 @@
 import { useAuth } from '@/lib/auth-context'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Home, Pill, Activity, Heart, Users, AlertCircle, Settings, LogOut, ChevronRight, User } from 'lucide-react'
+import Image from 'next/image'
+import { Home, Pill, Activity, Heart, Users, AlertCircle, Settings, LogOut, ChevronRight, User, ClipboardList, Syringe } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,8 +26,10 @@ export function Navigation() {
   const patientNav = [
     { label: 'Inicio', href: '/dashboard', icon: Home },
     { label: 'Medicamentos', href: '/medications', icon: Pill },
-    { label: 'Adherencia', href: '/adherence', icon: Activity },
+    { label: 'Mis pastillas', href: '/adherence', icon: Activity },
     { label: 'Mi salud', href: '/health-data', icon: Heart },
+    { label: 'Historial', href: '/clinical-history', icon: ClipboardList },
+    { label: 'Vacunas', href: '/vaccines', icon: Syringe },
     { label: 'Cuidadores', href: '/caregivers', icon: Users },
   ]
 
@@ -50,14 +53,9 @@ export function Navigation() {
       <nav className="hidden md:flex md:fixed md:left-0 md:top-0 md:w-64 md:h-screen md:flex-col md:border-r md:border-border bg-card z-30">
         {/* Logo */}
         <div className="p-5 border-b border-border">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-brand text-white flex items-center justify-center text-sm font-bold shadow-sm flex-shrink-0">
-              KC
-            </div>
-            <div>
-              <p className="font-bold leading-tight">Kawsaymi Care</p>
-              <p className="text-xs text-muted-foreground leading-tight">Adherencia a medicamentos</p>
-            </div>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Image src="/logo.png" alt="Kawsaymi Care" width={65} height={65} className="object-contain flex-shrink-0" />
+            <p className="text-xs text-muted-foreground leading-tight">Adherencia a medicamentos</p>
           </Link>
         </div>
 
@@ -123,11 +121,8 @@ export function Navigation() {
 
       {/* ── MOBILE TOP BAR ── */}
       <header className="md:hidden sticky top-0 z-40 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl gradient-brand text-white flex items-center justify-center text-sm font-bold">
-            KC
-          </div>
-          <span className="font-bold text-base">Kawsaymi</span>
+        <Link href="/dashboard" className="flex items-center">
+          <Image src="/logo.png" alt="Kawsaymi Care" width={65} height={65} className="object-contain" />
         </Link>
 
         {/* Avatar con dropdown */}
