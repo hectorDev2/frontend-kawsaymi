@@ -22,6 +22,8 @@ import type {
   Session,
 } from './types'
 
+import { emitDataChanged } from '@/lib/data-events'
+
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 
 const KEYS = {
@@ -297,6 +299,7 @@ export const mockApi: ApiContract = {
     const session = makeSession(newUser.id)
     save(KEYS.token, session.access_token)
     save(KEYS.currentUser, newUser)
+    emitDataChanged('auth')
     const { password: _, ...authUser } = newUser
     return { user: authUser, session }
   },
@@ -314,6 +317,7 @@ export const mockApi: ApiContract = {
     const session = makeSession(found.id)
     save(KEYS.token, session.access_token)
     save(KEYS.currentUser, found)
+    emitDataChanged('auth')
     const { password: _, ...authUser } = found
     return { user: authUser, session }
   },
@@ -324,6 +328,7 @@ export const mockApi: ApiContract = {
     if (!user) throw new Error('Sesión expirada')
     const session = makeSession(user.id)
     save(KEYS.token, session.access_token)
+    emitDataChanged('auth')
     return { session }
   },
 
@@ -331,6 +336,7 @@ export const mockApi: ApiContract = {
     await delay(100)
     localStorage.removeItem(KEYS.token)
     localStorage.removeItem(KEYS.currentUser)
+    emitDataChanged('auth')
     return { success: true }
   },
 
@@ -351,6 +357,7 @@ export const mockApi: ApiContract = {
     Object.assign(users[idx], payload)
     save(KEYS.users, users)
     save(KEYS.currentUser, users[idx])
+    emitDataChanged('user')
     return { user: userToProfile(users[idx]) }
   },
 
@@ -363,6 +370,7 @@ export const mockApi: ApiContract = {
       users[idx].allergies = allergies
       save(KEYS.users, users)
       save(KEYS.currentUser, users[idx])
+      emitDataChanged('user')
     }
   },
 
@@ -375,6 +383,7 @@ export const mockApi: ApiContract = {
       users[idx].conditions = conditions
       save(KEYS.users, users)
       save(KEYS.currentUser, users[idx])
+      emitDataChanged('user')
     }
   },
 
@@ -385,6 +394,7 @@ export const mockApi: ApiContract = {
     save(KEYS.users, users.filter((u) => u.id !== user.id))
     localStorage.removeItem(KEYS.token)
     localStorage.removeItem(KEYS.currentUser)
+    emitDataChanged('user')
     return { success: true }
   },
 
@@ -414,6 +424,10 @@ export const mockApi: ApiContract = {
     const meds = getMedicationsForUser(user.id)
     meds.push(newMed)
     saveMedicationsForUser(user.id, meds)
+    emitDataChanged('medications')
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    emitDataChanged('health')
     return { medication: newMed }
   },
 
@@ -425,6 +439,10 @@ export const mockApi: ApiContract = {
     if (idx === -1) throw new Error('Medicamento no encontrado')
     Object.assign(meds[idx], payload)
     saveMedicationsForUser(user.id, meds)
+    emitDataChanged('medications')
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    emitDataChanged('health')
     return { medication: meds[idx] }
   },
 
@@ -436,6 +454,10 @@ export const mockApi: ApiContract = {
     if (idx === -1) throw new Error('Medicamento no encontrado')
     meds[idx].status = status
     saveMedicationsForUser(user.id, meds)
+    emitDataChanged('medications')
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    emitDataChanged('health')
     return { medication: meds[idx] }
   },
 
@@ -444,6 +466,10 @@ export const mockApi: ApiContract = {
     const user = requireAuth()
     const meds = getMedicationsForUser(user.id)
     saveMedicationsForUser(user.id, meds.filter((m) => m.id !== id))
+    emitDataChanged('medications')
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    emitDataChanged('health')
     return { success: true }
   },
 
@@ -510,6 +536,8 @@ export const mockApi: ApiContract = {
     if (idx === -1) throw new Error('Evento no encontrado')
     events[idx].status = 'TAKEN'
     saveEvents(user.id, events)
+    emitDataChanged('events')
+    emitDataChanged('adherence')
     return { event: events[idx] }
   },
 
@@ -521,6 +549,8 @@ export const mockApi: ApiContract = {
     if (idx === -1) throw new Error('Evento no encontrado')
     events[idx].status = 'MISSED'
     saveEvents(user.id, events)
+    emitDataChanged('events')
+    emitDataChanged('adherence')
     return { event: events[idx] }
   },
 
@@ -589,6 +619,7 @@ export const mockApi: ApiContract = {
       health.imc = Math.round((weight / (h * h)) * 10) / 10
     }
     saveHealthForUser(user.id, health)
+    emitDataChanged('health')
     return { health }
   },
 

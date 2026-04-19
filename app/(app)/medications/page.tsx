@@ -10,6 +10,7 @@ import { api } from '@/lib/api'
 import { buildTipCacheKey, getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
 import type { Medication, MedicationEvent } from '@/lib/api'
 import Link from 'next/link'
+import { onDataChanged } from '@/lib/data-events'
 
 const PILL_COLORS = [
   'bg-blue-50 text-blue-700 border-blue-200',
@@ -164,7 +165,8 @@ export default function MedicationsPage() {
   const [items, setItems] = useState<MedWithEvents[]>([])
   const [loading, setLoading] = useState(true)
 
-  const load = async () => {
+  const load = async (opts?: { initial?: boolean }) => {
+    if (opts?.initial) setLoading(true)
     const [medRes, evtRes] = await Promise.all([api.getMedications(), api.getTodayEvents()])
     const active = (medRes.medications ?? []).filter((m: Medication) => m.status === 'ACTIVE')
     const todayEvents: MedicationEvent[] = evtRes.events ?? []
@@ -177,7 +179,15 @@ export default function MedicationsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load({ initial: true })
+    const off = onDataChanged((type) => {
+      if (type === 'medications' || type === 'events') {
+        load().catch(() => {})
+      }
+    })
+    return off
+  }, [])
 
   const handleMark = async (eventId: string, action: 'taken' | 'missed') => {
     const fn = action === 'taken' ? api.markEventTaken : api.markEventMissed
