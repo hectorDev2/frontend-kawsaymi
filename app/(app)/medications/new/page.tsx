@@ -18,10 +18,12 @@ const FREQ_OPTIONS = [
 ]
 
 function buildSchedule(startDate: string, times: string[]): string[] {
+  // `YYYY-MM-DD` parsed with `new Date()` is UTC and shifts the local day.
+  // Build the datetime in local time explicitly to keep the selected date.
+  const [y, mo, da] = startDate.split('-').map(Number)
   return times.map((t) => {
     const [h, m] = t.split(':').map(Number)
-    const d = new Date(startDate)
-    d.setHours(h, m, 0, 0)
+    const d = new Date(y, (mo ?? 1) - 1, da ?? 1, h ?? 0, m ?? 0, 0, 0)
     return d.toISOString()
   })
 }

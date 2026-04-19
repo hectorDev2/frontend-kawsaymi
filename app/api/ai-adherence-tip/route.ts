@@ -48,10 +48,10 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content:
-              'Sos un acompañante de salud que ayuda a adultos mayores en Argentina a tomar sus medicamentos a tiempo. ' +
-              'Respondé SOLO con 1-2 oraciones cortas en español rioplatense, sin tecnicismos ni markdown. ' +
-              'No des indicaciones médicas específicas ni cambies tratamientos; enfocá en hábitos y recordatorios simples.',
+              content:
+              'Eres un acompañante de salud que ayuda a adultos mayores a tomar sus medicamentos a tiempo. ' +
+              'Responde SOLO con 1-2 oraciones cortas en español neutro, sin tecnicismos ni markdown. ' +
+              'No des indicaciones médicas específicas ni cambies tratamientos; enfócate en hábitos y recordatorios simples.',
           },
           { role: 'user', content: userMessage },
         ],
