@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
 import { buildTipCacheKey, getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
+import type { KnowledgeAnswerSource } from '@/lib/api'
 import Link from 'next/link'
 
 const FREQ_OPTIONS = [
@@ -40,6 +41,7 @@ export default function NewMedicationPage() {
   const [saving, setSaving] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
+  const [aiSources, setAiSources] = useState<KnowledgeAnswerSource[] | null>(null)
   const [error, setError] = useState('')
 
   const handleAI = async () => {
@@ -50,16 +52,17 @@ export default function NewMedicationPage() {
 
      const conditions = ((user as any)?.conditions ?? []) as string[]
      const cacheKey = buildTipCacheKey({ medicationName: name, dose: dose || undefined, conditions })
-     const cached = getCachedTip(cacheKey)
-     if (cached) {
-       setInstructions(cached)
-       setAiError('')
-       return
-     }
+      const cached = getCachedTip(cacheKey)
+      if (cached) {
+        setInstructions(cached)
+        setAiError('')
+        setAiSources(null)
+        return
+      }
 
-    setAiError('')
-    setAiLoading(true)
-    try {
+     setAiError('')
+     setAiLoading(true)
+     try {
       const qParts = [
         `Dame instrucciones simples para tomar "${name}" sin cambiar el tratamiento.`,
         dose?.trim() ? `Dosis: ${dose.trim()}.` : null,
@@ -67,25 +70,38 @@ export default function NewMedicationPage() {
         'Responde en 1-2 oraciones en español neutro, sin markdown ni tecnicismos.',
       ].filter(Boolean)
 
-      const data = await api.knowledgeAnswer({
-        q: qParts.join(' '),
-        k: 6,
-        scoreMin: 0.8,
-        debug: false,
-      })
+       const data = await api.knowledgeAnswer({
+         q: qParts.join(' '),
+         k: 6,
+         scoreMin: 0.7,
+         debug: false,
+       })
 
-      const text = (data?.answer ?? '').toString().trim()
-      if (text) {
-        setInstructions(text)
-        setCachedTip(cacheKey, text)
-      } else {
-        setAiError('No se pudo obtener sugerencia')
-      }
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : 'Error de conexión con IA')
-    } finally {
-      setAiLoading(false)
-    }
+       const text = (data?.answer ?? '').toString().trim()
+       if (text) {
+         setInstructions(text)
+         const sources = data?.sources ?? null
+         setAiSources(sources)
+         // Only cache when the backend provides sources. Otherwise different meds
+         // can get stuck with the same generic fallback response.
+         if ((sources ?? []).length > 0) setCachedTip(cacheKey, text)
+       } else {
+         setAiError('No se pudo obtener sugerencia')
+         setAiSources(null)
+       }
+     } catch (e) {
+       const msg = e instanceof Error ? e.message : 'Error de conexión'
+       const friendly =
+         msg.includes('401') || msg.toLowerCase().includes('unauthorized')
+           ? 'Necesitás iniciar sesión para generar la sugerencia.'
+           : msg.includes('502')
+           ? 'El servicio de conocimiento está temporalmente no disponible. Probá de nuevo en unos minutos.'
+           : msg
+       setAiError(friendly)
+       setAiSources(null)
+     } finally {
+       setAiLoading(false)
+     }
   }
 
   const handleSave = async () => {
@@ -198,6 +214,18 @@ export default function NewMedicationPage() {
           {aiError && <p className="text-xs text-destructive">{aiError}</p>}
           {aiLoading && (
             <p className="text-xs text-muted-foreground animate-pulse">Consultando IA...</p>
+          )}
+          {!!aiSources?.length && (
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground">Fuentes</p>
+              <div className="mt-1 space-y-1">
+                {aiSources.slice(0, 3).map((s) => (
+                  <p key={s.id} className="text-xs text-muted-foreground">
+                    {s.id}: {s.title ?? s.source} (p. {s.page})
+                  </p>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 

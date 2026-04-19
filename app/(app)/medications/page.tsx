@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import { buildTipCacheKey, getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
-import type { Medication, MedicationEvent } from '@/lib/api'
+import type { KnowledgeAnswerSource, Medication, MedicationEvent } from '@/lib/api'
 import Link from 'next/link'
 import { onDataChanged } from '@/lib/data-events'
 
@@ -48,6 +48,7 @@ function MedicationTip({
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [suggestion, setSuggestion] = useState<string | null>(null)
+  const [sources, setSources] = useState<KnowledgeAnswerSource[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const loadTip = async (opts?: { force?: boolean }) => {
@@ -56,6 +57,7 @@ function MedicationTip({
       const cached = getCachedTip(key)
       if (cached) {
         setSuggestion(cached)
+        setSources(null)
         setError(null)
         return
       }
@@ -64,22 +66,37 @@ function MedicationTip({
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/ai-suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ medicationName, dose }),
-      })
+      const q = [
+        `Necesito una sugerencia personalizada sobre este medicamento: "${medicationName}".`,
+        dose?.trim() ? `Dosis/presentación: ${dose.trim()}.` : null,
+        'Responde en español neutro.',
+        'Formato estricto:',
+        '1) Cómo tomarlo: ...',
+        '2) Con qué tomarlo: ... (agua/comida/no aplica)',
+        '3) Precaución: ... (1 frase)',
+        'Sin markdown.',
+      ].filter(Boolean).join(' ')
 
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || 'No se pudo generar el tip')
+      const data = await api.knowledgeAnswer({ q, k: 10, scoreMin: 0.7, debug: false })
 
-      const text = (data?.suggestion ?? '').toString().trim()
-      const finalText = text || 'No pude generar un tip por ahora.'
+      const text = (data?.answer ?? '').toString().trim()
+      const finalText = text || 'No pude generar una sugerencia por ahora.'
       setSuggestion(finalText)
-      setCachedTip(key, finalText)
+      setSources(data?.sources ?? null)
+      // Cache only if we have sources. If the backend is down or returns generic text,
+      // caching would make different medications look identical.
+      if ((data?.sources ?? []).length > 0) setCachedTip(key, finalText)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error de conexión')
+      const msg = e instanceof Error ? e.message : 'Error de conexión'
+      const friendly =
+        msg.includes('401') || msg.toLowerCase().includes('unauthorized')
+          ? 'Necesitás iniciar sesión para generar el tip.'
+          : msg.includes('502')
+          ? 'El servicio de conocimiento está temporalmente no disponible. Probá de nuevo en unos minutos.'
+          : msg
+      setError(friendly)
       setSuggestion(null)
+      setSources(null)
     } finally {
       setLoading(false)
     }
@@ -132,7 +149,21 @@ function MedicationTip({
           ) : error ? (
             <p className="text-destructive">{error}</p>
           ) : (
-            <p className="leading-relaxed">{suggestion}</p>
+            <div className="space-y-3">
+              <p className="leading-relaxed">{suggestion}</p>
+              {!!sources?.length && (
+                <div className="pt-2 border-t border-border">
+                  <p className="text-xs font-semibold text-muted-foreground">Fuentes</p>
+                  <div className="mt-1 space-y-1">
+                    {sources.slice(0, 3).map((s) => (
+                      <p key={s.id} className="text-xs text-muted-foreground">
+                        {s.id}: {s.title ?? s.source} (p. {s.page})
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </PopoverContent>
