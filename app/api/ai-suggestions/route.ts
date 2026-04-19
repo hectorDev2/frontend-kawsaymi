@@ -34,10 +34,10 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content:
-              'Sos un farmacéutico clínico que explica medicamentos a adultos mayores en Argentina. ' +
-              'Respondé SOLO con 1-2 oraciones cortas en español rioplatense, sin tecnicismos ni markdown. ' +
-              'Ejemplo: "Tomalo con el desayuno para evitar molestias. Si olvidás una dosis, tomalá en cuanto te acordés."',
+              content:
+              'Eres un farmacéutico clínico que explica medicamentos a adultos mayores. ' +
+              'Responde SOLO con 1-2 oraciones cortas en español neutro, sin tecnicismos ni markdown. ' +
+              'Ejemplo: "Tómalo con el desayuno para evitar molestias. Si olvidas una dosis, tómala en cuanto lo recuerdes."',
           },
           { role: 'user', content: userMessage },
         ],
