@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, XCircle, Clock, Smile, AlertCircle, Pill, Sparkles } from 'lucide-react'
 import { api } from '@/lib/api'
+import { onDataChanged } from '@/lib/data-events'
 import type { AdherenceStats, MedicationEvent } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -155,16 +156,25 @@ export default function AdherencePage() {
   const [days, setDays] = useState<DayStat[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    Promise.all([
+  const load = async () => {
+    const [w, t, evtRes] = await Promise.all([
       api.getWeekAdherence(),
       api.getTodayAdherence(),
       api.getWeekEvents(),
-    ]).then(([w, t, evtRes]) => {
-      setWeek(w)
-      setToday(t)
-      setDays(buildWeekStats(evtRes.events ?? []))
-    }).finally(() => setLoading(false))
+    ])
+    setWeek(w)
+    setToday(t)
+    setDays(buildWeekStats(evtRes.events ?? []))
+  }
+
+  useEffect(() => {
+    load().finally(() => setLoading(false))
+    const off = onDataChanged((type) => {
+      if (type === 'events' || type === 'adherence') {
+        load().catch(() => {})
+      }
+    })
+    return off
   }, [])
 
   const weekRate = week ? Math.round(week.adherenceRate * 100) : 0

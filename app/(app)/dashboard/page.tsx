@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
 import { useToast } from '@/hooks/use-toast'
+import { onDataChanged } from '@/lib/data-events'
 
 // ─── Circular Progress ───────────────────────────────────────────────────────
 
@@ -262,15 +263,25 @@ function PatientDashboard({ user }: { user: any }) {
   const [loading, setLoading] = useState(true)
   const [demoTaken, setDemoTaken] = useState(false)
 
+  const load = async () => {
+    const [evtRes, adh] = await Promise.all([api.getTodayEvents(), api.getTodayAdherence()])
+    setEvents(
+      (evtRes.events ?? []).sort(
+        (a, b) => new Date(a.dateTimeScheduled).getTime() - new Date(b.dateTimeScheduled).getTime()
+      )
+    )
+    setAdherence(adh)
+  }
+
   useEffect(() => {
-    Promise.all([api.getTodayEvents(), api.getTodayAdherence()])
-      .then(([evtRes, adh]) => {
-        setEvents(evtRes.events.sort(
-          (a, b) => new Date(a.dateTimeScheduled).getTime() - new Date(b.dateTimeScheduled).getTime()
-        ))
-        setAdherence(adh)
-      })
-      .finally(() => setLoading(false))
+    load().finally(() => setLoading(false))
+
+    const off = onDataChanged((type) => {
+      if (type === 'medications' || type === 'events' || type === 'adherence') {
+        load().catch(() => {})
+      }
+    })
+    return off
   }, [])
 
   const handleMark = async (id: string, action: 'taken' | 'missed') => {
