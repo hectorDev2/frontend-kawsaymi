@@ -17,6 +17,8 @@ import type {
   KnowledgeAnswerBody,
 } from './types'
 
+import { emitDataChanged } from '@/lib/data-events'
+
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 // Keep this stable across mock/real so users don't "lose" sessions when switching.
 const TOKEN_KEY = 'kw_token'
@@ -62,24 +64,28 @@ export const httpApi: ApiContract = {
   async register(p: RegisterPayload): Promise<AuthResponse> {
     const data = await req<AuthResponse>('POST', '/auth/register', p, false)
     if (data.session?.access_token) saveToken(data.session.access_token)
+    emitDataChanged('auth')
     return data
   },
 
   async login(p: LoginPayload): Promise<AuthResponse> {
     const data = await req<AuthResponse>('POST', '/auth/login', p, false)
     if (data.session?.access_token) saveToken(data.session.access_token)
+    emitDataChanged('auth')
     return data
   },
 
   async refresh(refreshToken: string) {
     const data = await req<any>('POST', '/auth/refresh', { refreshToken }, false)
     if (data.session?.access_token) saveToken(data.session.access_token)
+    emitDataChanged('auth')
     return data
   },
 
   async logout() {
     const data = await req<any>('POST', '/auth/logout')
     localStorage.removeItem(TOKEN_KEY)
+    emitDataChanged('auth')
     return data
   },
 
@@ -88,16 +94,22 @@ export const httpApi: ApiContract = {
     return req('GET', '/users/me')
   },
   async updateMe(payload: UpdateProfilePayload) {
-    return req('PUT', '/users/me', payload)
+    const res = await req<{ user: import('./types').UserProfile }>('PUT', '/users/me', payload)
+    emitDataChanged('user')
+    return res
   },
   async updateAllergies(allergies: string[]) {
     await req('PUT', '/users/me/allergies', { allergies })
+    emitDataChanged('user')
   },
   async updateConditions(conditions: string[]) {
     await req('PUT', '/users/me/conditions', { conditions })
+    emitDataChanged('user')
   },
   async deleteMe() {
-    return req('DELETE', '/users/me')
+    const res = await req<{ success: boolean }>('DELETE', '/users/me')
+    emitDataChanged('user')
+    return res
   },
 
   // Medications
@@ -108,16 +120,36 @@ export const httpApi: ApiContract = {
     return req('GET', `/medications/${id}`)
   },
   async createMedication(payload: CreateMedicationPayload) {
-    return req('POST', '/medications', payload)
+    const res = await req<{ medication: import('./types').Medication }>('POST', '/medications', payload)
+    emitDataChanged('medications')
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    emitDataChanged('health')
+    return res
   },
   async updateMedication(id: string, payload: UpdateMedicationPayload) {
-    return req('PUT', `/medications/${id}`, payload)
+    const res = await req<{ medication: import('./types').Medication }>('PUT', `/medications/${id}`, payload)
+    emitDataChanged('medications')
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    emitDataChanged('health')
+    return res
   },
   async patchMedicationStatus(id: string, status: MedicationStatus) {
-    return req('PATCH', `/medications/${id}/status`, { status })
+    const res = await req<{ medication: import('./types').Medication }>('PATCH', `/medications/${id}/status`, { status })
+    emitDataChanged('medications')
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    emitDataChanged('health')
+    return res
   },
   async deleteMedication(id: string) {
-    return req('DELETE', `/medications/${id}`)
+    const res = await req<{ success: boolean }>('DELETE', `/medications/${id}`)
+    emitDataChanged('medications')
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    emitDataChanged('health')
+    return res
   },
 
   // Events
@@ -137,10 +169,16 @@ export const httpApi: ApiContract = {
     return req('GET', '/events/week')
   },
   async markEventTaken(id: string) {
-    return req('PATCH', `/events/${id}/mark-taken`)
+    const res = await req<{ event: import('./types').MedicationEvent }>('PATCH', `/events/${id}/mark-taken`)
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    return res
   },
   async markEventMissed(id: string) {
-    return req('PATCH', `/events/${id}/mark-missed`)
+    const res = await req<{ event: import('./types').MedicationEvent }>('PATCH', `/events/${id}/mark-missed`)
+    emitDataChanged('events')
+    emitDataChanged('adherence')
+    return res
   },
 
   // Adherence
@@ -162,7 +200,9 @@ export const httpApi: ApiContract = {
     return req('GET', '/health/profile')
   },
   async updateWeight(weight: number) {
-    return req('POST', '/health/weight', { weight })
+    const res = await req<{ health: import('./types').HealthProfile }>('POST', '/health/weight', { weight })
+    emitDataChanged('health')
+    return res
   },
   async getImc() {
     return req('GET', '/health/imc')
