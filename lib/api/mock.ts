@@ -27,11 +27,14 @@ import type {
 const KEYS = {
   users: 'kw_mock_users',
   currentUser: 'kw_mock_current_user',
-  token: 'kw_mock_token',
+  // Keep this stable across mock/real so users don't "lose" sessions when switching.
+  token: 'kw_token',
   medications: 'kw_mock_medications',
   events: 'kw_mock_events',
   health: 'kw_mock_health',
 }
+
+const LEGACY_TOKEN_KEY = 'kw_mock_token'
 
 function load<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback
@@ -189,7 +192,7 @@ function makeSession(userId: string): Session {
 }
 
 function requireAuth(): StoredUser {
-  const token = load<string | null>(KEYS.token, null)
+  const token = load<string | null>(KEYS.token, null) || load<string | null>(LEGACY_TOKEN_KEY, null)
   const user = load<StoredUser | null>(KEYS.currentUser, null)
   if (!token || !user) throw new Error('No autenticado')
   return user
@@ -602,5 +605,19 @@ export const mockApi: ApiContract = {
     const meds = getMedicationsForUser(user.id)
     const activeMedications = meds.filter((m) => m.status === 'ACTIVE').length
     return { activeMedications, polypharmacy: activeMedications >= 5 }
+  },
+
+  // ── Knowledge (no mock implementation) ─────────────────────────────────────
+  async knowledgeSearch() {
+    await delay(100)
+    throw new Error('Knowledge no disponible en modo demo')
+  },
+  async knowledgeAnswer() {
+    await delay(100)
+    throw new Error('Knowledge no disponible en modo demo')
+  },
+  async knowledgeIngestDocuments() {
+    await delay(100)
+    throw new Error('Solo ADMIN: Knowledge no disponible en modo demo')
   },
 }

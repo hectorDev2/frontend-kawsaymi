@@ -105,6 +105,15 @@ RootLayout (with i18n + AuthProvider)
 - **Protected Routes**: Redirect to login if not authenticated
 - **Role-Based Access**: Patient vs Caregiver routes
 
+### Switch To Real Backend
+
+Set these env vars in `.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=https://kawsaymi-care-backend.onrender.com
+NEXT_PUBLIC_USE_MOCK=false
+```
+
 ### Backend Integration (Future)
 ```typescript
 // Update lib/api.ts with your backend URL

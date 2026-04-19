@@ -137,6 +137,59 @@ export interface PolypharmacyInfo {
   polypharmacy: boolean
 }
 
+// ─── Knowledge (RAG) ─────────────────────────────────────────────────────────
+
+export interface KnowledgeMatch {
+  chunkId: string
+  documentId: string
+  page: number
+  chunkIndex: number
+  content: string
+  score: number
+  docSource: string
+  docTitle: string | null
+  docMetadata: Record<string, unknown> | null
+}
+
+export interface KnowledgeSearchResponse {
+  matches: KnowledgeMatch[]
+}
+
+export interface KnowledgeAnswerBody {
+  q: string
+  k?: number
+  scoreMin?: number
+  debug?: boolean
+}
+
+export interface KnowledgeAnswerSource {
+  id: string
+  source: string
+  title: string | null
+  page: number
+  chunkIndex: number
+  score: number
+}
+
+export interface KnowledgeAnswerResponse {
+  answer: string
+  sources: KnowledgeAnswerSource[]
+  // Present only when debug=true on backend.
+  matches?: KnowledgeMatch[]
+  rawMatches?: KnowledgeMatch[]
+  scoreMin?: number
+}
+
+export interface KnowledgeIngestResponse {
+  folder: string
+  processed: number
+  documents: Array<{
+    source: string
+    documentId: string
+    chunks: number
+  }>
+}
+
 // ─── API contract ─────────────────────────────────────────────────────────────
 
 export interface ApiContract {
@@ -179,4 +232,10 @@ export interface ApiContract {
   updateWeight: (weight: number) => Promise<{ health: HealthProfile }>
   getImc: () => Promise<{ imc: number | null }>
   getPolypharmacy: () => Promise<PolypharmacyInfo>
+
+  // Knowledge (RAG)
+  knowledgeSearch: (q: string, k?: number) => Promise<KnowledgeSearchResponse>
+  knowledgeAnswer: (body: KnowledgeAnswerBody) => Promise<KnowledgeAnswerResponse>
+  // Admin only
+  knowledgeIngestDocuments: () => Promise<KnowledgeIngestResponse>
 }

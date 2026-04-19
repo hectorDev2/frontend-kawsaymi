@@ -14,14 +14,17 @@ import type {
   EventsQuery,
   UpdateProfilePayload,
   AdherenceStats,
+  KnowledgeAnswerBody,
 } from './types'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
-const TOKEN_KEY = 'kw_mock_token'
+// Keep this stable across mock/real so users don't "lose" sessions when switching.
+const TOKEN_KEY = 'kw_token'
+const LEGACY_TOKEN_KEY = 'kw_mock_token'
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem(TOKEN_KEY)
+  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY)
 }
 
 function saveToken(token: string) {
@@ -166,5 +169,19 @@ export const httpApi: ApiContract = {
   },
   async getPolypharmacy() {
     return req('GET', '/health/polypharmacy')
+  },
+
+  // Knowledge
+  async knowledgeSearch(q: string, k?: number) {
+    const params = new URLSearchParams()
+    params.set('q', q)
+    if (typeof k === 'number') params.set('k', String(k))
+    return req('GET', `/knowledge/search?${params.toString()}`)
+  },
+  async knowledgeAnswer(body: KnowledgeAnswerBody) {
+    return req('POST', '/knowledge/answer', body)
+  },
+  async knowledgeIngestDocuments() {
+    return req('POST', '/knowledge/documents')
   },
 }

@@ -21,7 +21,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const CURRENT_USER_KEY = 'kw_mock_current_user'
+const CURRENT_USER_KEY = 'kw_current_user'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthContextType['user']>(null)
@@ -51,19 +51,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const { user: authUser } = await api.login({ email, password })
     setUser(authUser as any)
-  }, [])
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authUser))
+    }
+    // Ensure we load the full profile (role/timezone/etc.) from /users/me.
+    await refreshUser()
+  }, [refreshUser])
 
   const signup = useCallback(
     async (data: { email: string; password: string; name: string; role: 'PATIENT' | 'CAREGIVER' }) => {
       const { user: authUser } = await api.register(data)
       setUser(authUser as any)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authUser))
+      }
+      // Ensure we load the full profile (role/timezone/etc.) from /users/me.
+      await refreshUser()
     },
-    []
+    [refreshUser]
   )
 
   const logout = useCallback(async () => {
     await api.logout()
     setUser(null)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CURRENT_USER_KEY)
+    }
   }, [])
 
   return (

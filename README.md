@@ -94,7 +94,8 @@ cp .env.example .env.local
 
 Configure these variables:
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_API_URL=https://kawsaymi-care-backend.onrender.com
+NEXT_PUBLIC_USE_MOCK=false
 NODE_ENV=development
 ```
 
@@ -109,8 +110,8 @@ Visit `http://localhost:3000` to see the app.
 
 ### Authentication Flow
 1. User logs in with email/password on `/auth/login`
-2. AuthProvider validates credentials via `/api/auth/login`
-3. JWT token stored in httpOnly cookie (secure)
+2. AuthProvider calls the backend (`/auth/login`)
+3. Access token stored in localStorage (see `lib/api/http.ts`)
 4. Protected routes redirect unauthenticated users to login
 5. User role (patient/caregiver) determines available routes
 
@@ -128,32 +129,54 @@ Visit `http://localhost:3000` to see the app.
 
 ## API Integration
 
-The app is ready to connect to a backend API. Update `lib/api.ts` with your API endpoints:
+The API client lives in `lib/api/*`.
 
-```typescript
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
-```
-
-### Required Endpoints
+### Backend Endpoints Used
 
 **Authentication**
-- `POST /auth/login` - User login
-- `POST /auth/signup` - User registration
-- `GET /auth/me` - Current user info
-- `POST /auth/logout` - User logout
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
 
-**Patient**
-- `GET /patient/dashboard` - Dashboard data
-- `GET /patient/medications` - List medications
-- `POST /patient/adherence` - Log dose
-- `GET /patient/caregivers` - List caregivers
-- `POST /patient/caregivers/invite` - Invite caregiver
+**Users**
+- `GET /users/me`
+- `PUT /users/me`
+- `PUT /users/me/allergies`
+- `PUT /users/me/conditions`
+- `DELETE /users/me`
 
-**Caregiver**
-- `GET /caregiver/dashboard` - Dashboard data
-- `GET /caregiver/patients` - Patient list
-- `GET /caregiver/patients/{id}` - Patient details
-- `GET /caregiver/alerts` - Alerts list
+**Medications**
+- `GET /medications`
+- `GET /medications/:id`
+- `POST /medications`
+- `PUT /medications/:id`
+- `PATCH /medications/:id/status`
+- `DELETE /medications/:id`
+
+**Events**
+- `GET /events`
+- `GET /events/today`
+- `GET /events/week`
+- `PATCH /events/:id/mark-taken`
+- `PATCH /events/:id/mark-missed`
+
+**Adherence**
+- `GET /adherence/today`
+- `GET /adherence/week`
+- `GET /adherence/month`
+- `GET /adherence/stats`
+
+**Health**
+- `GET /health/profile`
+- `POST /health/weight`
+- `GET /health/imc`
+- `GET /health/polypharmacy`
+
+**Knowledge (RAG)**
+- `GET /knowledge/search`
+- `POST /knowledge/answer`
+- `POST /knowledge/documents` (ADMIN)
 
 ## Customization
 
