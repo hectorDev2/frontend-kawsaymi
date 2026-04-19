@@ -60,24 +60,29 @@ export default function NewMedicationPage() {
     setAiError('')
     setAiLoading(true)
     try {
-      const res = await fetch('/api/ai-suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          medicationName: name,
-          dose: dose || undefined,
-          conditions,
-        }),
+      const qParts = [
+        `Dame instrucciones simples para tomar "${name}" sin cambiar el tratamiento.`,
+        dose?.trim() ? `Dosis: ${dose.trim()}.` : null,
+        conditions?.length ? `Condiciones: ${conditions.join(', ')}.` : null,
+        'Responde en 1-2 oraciones en español neutro, sin markdown ni tecnicismos.',
+      ].filter(Boolean)
+
+      const data = await api.knowledgeAnswer({
+        q: qParts.join(' '),
+        k: 6,
+        scoreMin: 0.8,
+        debug: false,
       })
-      const data = await res.json()
-      if (data.suggestion) {
-        setInstructions(data.suggestion)
-        setCachedTip(cacheKey, data.suggestion)
+
+      const text = (data?.answer ?? '').toString().trim()
+      if (text) {
+        setInstructions(text)
+        setCachedTip(cacheKey, text)
       } else {
         setAiError('No se pudo obtener sugerencia')
       }
-    } catch {
-      setAiError('Error de conexión con IA')
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'Error de conexión con IA')
     } finally {
       setAiLoading(false)
     }
