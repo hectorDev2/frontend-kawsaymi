@@ -19,7 +19,12 @@ import type {
 
 import { emitDataChanged } from '@/lib/data-events'
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+const DEFAULT_BASE =
+  process.env.NODE_ENV === 'production'
+    ? 'https://kawsaymi-care-backend.onrender.com'
+    : 'http://localhost:3000'
+
+const BASE = process.env.NEXT_PUBLIC_API_URL || DEFAULT_BASE
 // Keep this stable across mock/real so users don't "lose" sessions when switching.
 const TOKEN_KEY = 'kw_token'
 const LEGACY_TOKEN_KEY = 'kw_mock_token'

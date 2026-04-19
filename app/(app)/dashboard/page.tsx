@@ -298,6 +298,8 @@ function PatientDashboard({ user }: { user: any }) {
     setAdherence(adh)
   }
 
+  const isDemoMode = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
+
   const demoAdh: AdherenceStats = {
     taken: demoTaken ? 1 : 0,
     total: 1,
@@ -307,7 +309,7 @@ function PatientDashboard({ user }: { user: any }) {
     activeMedications: 1,
   }
 
-  const effectiveAdherence = !loading && events.length === 0 ? demoAdh : adherence
+  const effectiveAdherence = isDemoMode && !loading && events.length === 0 ? demoAdh : adherence
 
   const progress = effectiveAdherence ? Math.round(effectiveAdherence.adherenceRate * 100) : 0
   const taken = effectiveAdherence?.taken ?? 0
@@ -327,7 +329,7 @@ function PatientDashboard({ user }: { user: any }) {
               <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <p className="text-white/80 text-sm font-medium mb-1">Progreso del día</p>
-                {!loading && events.length === 0 && (
+                {isDemoMode && !loading && events.length === 0 && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/15 text-white/90">DEMO</span>
                 )}
               </div>
