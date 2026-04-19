@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
-import type { MedicationEvent, AdherenceStats } from '@/lib/api'
+import type { Medication, MedicationEvent, AdherenceStats } from '@/lib/api'
 import Link from 'next/link'
 import { CheckCircle2, Clock, Circle, ChevronRight, Users, AlertCircle, Activity, Heart, Pill, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -259,18 +259,24 @@ function EventDoseTip({
 function PatientDashboard({ user }: { user: any }) {
   const { toast } = useToast()
   const [events, setEvents] = useState<MedicationEvent[]>([])
+  const [medications, setMedications] = useState<Medication[]>([])
   const [adherence, setAdherence] = useState<AdherenceStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [demoTaken, setDemoTaken] = useState(false)
 
   const load = async () => {
-    const [evtRes, adh] = await Promise.all([api.getTodayEvents(), api.getTodayAdherence()])
+    const [evtRes, adh, medRes] = await Promise.all([
+      api.getTodayEvents(),
+      api.getTodayAdherence(),
+      api.getMedications(),
+    ])
     setEvents(
       (evtRes.events ?? []).sort(
         (a, b) => new Date(a.dateTimeScheduled).getTime() - new Date(b.dateTimeScheduled).getTime()
       )
     )
     setAdherence(adh)
+    setMedications((medRes.medications ?? []).filter((m) => m.status === 'ACTIVE'))
   }
 
   useEffect(() => {
@@ -374,60 +380,45 @@ function PatientDashboard({ user }: { user: any }) {
             ))}
           </div>
         ) : events.length === 0 ? (
-          <div className="card-elevated p-8 text-center text-muted-foreground">
-            <Pill className="w-10 h-10 mx-auto mb-2 opacity-40" />
-            <p className="font-medium">Sin medicamentos programados para hoy</p>
-            <Link href="/medications" className="text-primary text-sm font-semibold hover:underline mt-2 block">
-              Agregar medicamento
-            </Link>
-
-            {/* Demo para probar Tip (B) cuando no hay eventos */}
-            <div className="mt-6 text-left">
-              <p className="text-xs font-semibold text-muted-foreground mb-2">Ejemplo (demo)</p>
-              <div className="card-elevated border overflow-hidden">
-                <div className="p-4 flex items-center gap-4">
-                  <div className="text-center w-14 flex-shrink-0">
-                    <p className="text-lg font-bold leading-none">08:00</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">hs</p>
-                  </div>
-                  <div className="w-px h-10 bg-border flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-base truncate text-foreground">Metformina</p>
-                    <p className="text-sm text-muted-foreground">500mg</p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <EventDoseTip
-                      eventId="demo-event"
-                      medicationName="Metformina"
-                      dose="500mg"
-                      scheduledIso={new Date().toISOString()}
-                      scheduledLabel="08:00"
-                    />
-                    {demoTaken ? (
-                      <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full bg-secondary/10 text-secondary">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Tomado
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDemoTaken(true)
-                          toast({
-                            title: 'Demo',
-                            description: 'Marcado como tomado (solo para prueba).',
-                          })
-                        }}
-                        className="bg-primary text-primary-foreground text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-primary/90 active:scale-95 transition-all"
-                      >
-                        Tomar ahora
-                      </button>
-                    )}
-                  </div>
+          medications.length > 0 ? (
+            <div className="card-elevated p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-bold text-base">Tus medicamentos</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    No hay tomas programadas para hoy, pero estos son tus medicamentos activos.
+                  </p>
                 </div>
+                <Link href="/medications" className="text-primary text-sm font-semibold hover:underline whitespace-nowrap">
+                  Ver todos
+                </Link>
               </div>
+              <div className="mt-4 space-y-2">
+                {medications.slice(0, 3).map((m) => (
+                  <div key={m.id} className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{m.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">{m.dose}</p>
+                    </div>
+                    <Pill className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  </div>
+                ))}
+              </div>
+              {medications.length > 3 && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Y {medications.length - 3} más...
+                </p>
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="card-elevated p-8 text-center text-muted-foreground">
+              <Pill className="w-10 h-10 mx-auto mb-2 opacity-40" />
+              <p className="font-medium">Sin medicamentos programados para hoy</p>
+              <Link href="/medications" className="text-primary text-sm font-semibold hover:underline mt-2 block">
+                Agregar medicamento
+              </Link>
+            </div>
+          )
         ) : (
           <div className="space-y-3">
             {events.map((evt) => {
