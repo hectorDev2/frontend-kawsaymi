@@ -11,6 +11,8 @@ import { ArrowLeft, Save, Upload } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
+const CLINICAL_STORAGE_KEY = 'kw_clinical_history:v1'
+
 const CHRONIC_DISEASES = [
   'Hipertensión',
   'Diabetes',
@@ -37,6 +39,7 @@ export default function ClinicalHistoryPage() {
   const { toast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
+  const storageSyncedRef = useRef(false)
   const [form, setForm] = useState<FormState>({
     antecedentes: '',
     enfermedades: [],
@@ -48,12 +51,39 @@ export default function ClinicalHistoryPage() {
   })
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem(CLINICAL_STORAGE_KEY)
+        if (saved) {
+          const parsed = JSON.parse(saved) as Partial<FormState>
+          setForm((f) => ({
+            ...f,
+            antecedentes: parsed.antecedentes ?? f.antecedentes,
+            enfermedades: parsed.enfermedades ?? f.enfermedades,
+            cirugias: parsed.cirugias ?? f.cirugias,
+            hospitalizaciones: parsed.hospitalizaciones ?? f.hospitalizaciones,
+            transfusiones: parsed.transfusiones ?? f.transfusiones,
+            vacunas: parsed.vacunas ?? f.vacunas,
+          }))
+        }
+      } catch {
+        window.localStorage.removeItem(CLINICAL_STORAGE_KEY)
+      }
+    }
+    storageSyncedRef.current = true
+
     api.getMe().then(({ user }) => {
       if (user.conditions?.length) {
         setForm((f) => ({ ...f, enfermedades: user.conditions ?? [] }))
       }
     })
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !storageSyncedRef.current) return
+    const { certificadoVacunas: _file, ...serializable } = form
+    window.localStorage.setItem(CLINICAL_STORAGE_KEY, JSON.stringify(serializable))
+  }, [form])
 
   const toggleDisease = (disease: string) => {
     setForm((f) => ({
@@ -222,16 +252,16 @@ export default function ClinicalHistoryPage() {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
           <Button
             variant="outline"
-            className="h-12 px-8 text-base"
+            className="w-full sm:w-auto h-12 px-8 text-base"
             onClick={() => router.push('/dashboard')}
           >
             Cancelar
           </Button>
           <Button
-            className="h-12 px-8 text-base gap-2"
+            className="w-full sm:w-auto h-12 px-8 text-base gap-2"
             onClick={handleSave}
             disabled={saving}
           >
