@@ -46,7 +46,8 @@ export function HealthContextProvider({ children }: { children: ReactNode }) {
       if (healthRes.status === 'fulfilled') {
         const h = healthRes.value.health
         data.weight = h.weight
-        data.height = h.height
+        // height: prefer API value, fallback to localStorage (already set above)
+        if (h.height) data.height = h.height
         data.imc = h.imc
       }
       if (meRes.status === 'fulfilled') {
