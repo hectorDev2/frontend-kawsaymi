@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Navigation } from '@/components/navigation'
+import { HealthContextProvider } from '@/lib/health-context'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -29,12 +30,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) return null
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Navigation />
-      {/* md:pl-64 por el sidebar desktop | pb-24 por el bottom nav mobile */}
-      <main className="flex-1 md:pl-64 pb-24 md:pb-0">
-        {children}
-      </main>
-    </div>
+    <HealthContextProvider>
+      <div className="flex min-h-screen flex-col bg-background">
+        <Navigation />
+        {/* md:pl-64 por el sidebar desktop | pb-24 por el bottom nav mobile */}
+        <main className="flex-1 md:pl-64 pb-24 md:pb-0">
+          {children}
+        </main>
+      </div>
+    </HealthContextProvider>
   )
 }

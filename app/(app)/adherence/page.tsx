@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
+import { useHealthContext } from '@/lib/health-context'
 
 const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
@@ -61,6 +62,7 @@ function AdherenceTip({
   const [loading, setLoading] = useState(false)
   const [tip, setTip] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const healthContext = useHealthContext()
 
   const load = async (opts?: { force?: boolean }) => {
     const key = adherenceTipCacheKey(scope, stats)
@@ -79,7 +81,7 @@ function AdherenceTip({
       const res = await fetch('/api/ai-adherence-tip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scope, ...stats }),
+        body: JSON.stringify({ scope, ...stats, userContext: healthContext }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || 'No se pudo generar el tip')
