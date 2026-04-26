@@ -7,6 +7,7 @@ import { buildHealthContext, type UserHealthData } from '@/lib/user-health-conte
 const WELLNESS_KEY = 'kw_wellness_planner:v1'
 const CLINICAL_KEY = 'kw_clinical_history:v1'
 const VACCINES_KEY = 'kw_vaccines:v1'
+const HEIGHT_KEY = 'kw_health_height:v1'
 
 const HealthCtx = createContext<string>('')
 
@@ -29,6 +30,11 @@ export function HealthContextProvider({ children }: { children: ReactNode }) {
         const raw = window.localStorage.getItem(VACCINES_KEY)
         if (raw) data.vaccines = JSON.parse(raw)
       } catch {}
+      const savedHeight = window.localStorage.getItem(HEIGHT_KEY)
+      if (savedHeight) {
+        const h = Number.parseFloat(savedHeight)
+        if (h > 0) data.height = h
+      }
     }
 
     Promise.allSettled([

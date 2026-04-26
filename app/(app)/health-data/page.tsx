@@ -25,6 +25,7 @@ import {
 } from '@/lib/wellness-plan'
 
 const WELLNESS_STORAGE_KEY = 'kw_wellness_planner:v1'
+const HEIGHT_STORAGE_KEY = 'kw_health_height:v1'
 
 const MEAL_ICONS = {
   breakfast: Coffee,
@@ -155,18 +156,29 @@ export default function HealthDataPage() {
   const imcValue = imcPreview !== null ? imcPreview : (health?.imc ?? null)
   const imcCat = imcValue !== null ? imcCategory(imcValue) : null
 
+  const heightNum = Number.parseFloat(height) || health?.height || undefined
+
   const plan = useMemo(
-    () => generateWellnessPlan(wellness, { weight: health?.weight, height: health?.height, imc: imcValue }),
-    [health?.height, health?.weight, imcValue, wellness],
+    () => generateWellnessPlan(wellness, { weight: health?.weight, height: heightNum, imc: imcValue }),
+    [health?.weight, heightNum, imcValue, wellness],
   )
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedHeight = window.localStorage.getItem(HEIGHT_STORAGE_KEY)
+      if (savedHeight) setHeight(savedHeight)
+    }
+
     Promise.all([api.getHealthProfile(), api.getPolypharmacy()])
       .then(([hRes, p]) => {
         setHealth(hRes.health)
         setPoly(p)
         if (hRes.health.weight) setWeight(String(hRes.health.weight))
-        if (hRes.health.height) setHeight(String(hRes.health.height))
+        if (hRes.health.height) {
+          const h = String(hRes.health.height)
+          setHeight(h)
+          if (typeof window !== 'undefined') window.localStorage.setItem(HEIGHT_STORAGE_KEY, h)
+        }
       })
       .finally(() => setLoading(false))
   }, [])
@@ -188,10 +200,17 @@ export default function HealthDataPage() {
     window.localStorage.setItem(WELLNESS_STORAGE_KEY, JSON.stringify(wellness))
   }, [wellness])
 
-  const handleSaveWeight = async () => {
+  const handleSaveMeasurements = async () => {
     const nextWeight = Number.parseFloat(weight)
+    const nextHeight = Number.parseFloat(height)
+
     if (Number.isNaN(nextWeight) || nextWeight <= 0) {
       toast({ title: 'Error', description: 'Ingresá un peso válido', variant: 'destructive' })
+      return
+    }
+
+    if (height && (Number.isNaN(nextHeight) || nextHeight <= 0)) {
+      toast({ title: 'Error', description: 'Ingresá una altura válida', variant: 'destructive' })
       return
     }
 
@@ -199,9 +218,14 @@ export default function HealthDataPage() {
     try {
       const { health: updated } = await api.updateWeight(nextWeight)
       setHealth(updated)
-      toast({ title: '¡Guardado!', description: 'Peso actualizado correctamente' })
+
+      if (height && typeof window !== 'undefined') {
+        window.localStorage.setItem(HEIGHT_STORAGE_KEY, height)
+      }
+
+      toast({ title: '¡Guardado!', description: 'Medidas actualizadas correctamente' })
     } catch {
-      toast({ title: 'Error', description: 'No se pudo guardar el peso', variant: 'destructive' })
+      toast({ title: 'Error', description: 'No se pudo guardar las medidas', variant: 'destructive' })
     } finally {
       setSaving(false)
     }
@@ -319,9 +343,9 @@ export default function HealthDataPage() {
             {imcCat && <span className={`ml-2 font-bold ${imcCat.tone}`}>({imcCat.label})</span>}
           </div>
         )}
-        <Button onClick={handleSaveWeight} disabled={saving || !weight} className="w-full md:w-auto h-12 rounded-xl gap-2">
+        <Button onClick={handleSaveMeasurements} disabled={saving || !weight} className="w-full md:w-auto h-12 rounded-xl gap-2">
           <Save className="w-5 h-5" />
-          {saving ? 'Guardando...' : 'Guardar peso'}
+          {saving ? 'Guardando...' : 'Guardar medidas'}
         </Button>
       </div>
 

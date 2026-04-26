@@ -623,6 +623,20 @@ export const mockApi: ApiContract = {
     return { health }
   },
 
+  async updateHeight(height) {
+    await delay()
+    const user = requireAuth()
+    const health = getHealthForUser(user.id)
+    health.height = height
+    if (health.weight) {
+      const h = height / 100
+      health.imc = Math.round((health.weight / (h * h)) * 10) / 10
+    }
+    saveHealthForUser(user.id, health)
+    emitDataChanged('health')
+    return { health }
+  },
+
   async getImc() {
     await delay()
     const user = requireAuth()
