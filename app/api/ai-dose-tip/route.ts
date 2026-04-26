@@ -13,10 +13,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const medicationName = (body?.medicationName ?? '').toString().trim()
   const dose = (body?.dose ?? '').toString().trim()
-  const scheduledTime = (body?.scheduledTime ?? '').toString().trim() // ISO preferred
+  const scheduledTime = (body?.scheduledTime ?? '').toString().trim()
   const eventStatus = (body?.eventStatus ?? 'PENDING').toString().trim().toUpperCase()
   const instructions = (body?.instructions ?? '').toString().trim()
   const contextLabel = (body?.contextLabel ?? 'toma de hoy').toString().trim()
+  const userContext = (body?.userContext ?? '').toString().trim()
 
   if (!medicationName) {
     return NextResponse.json({ error: 'Falta nombre del medicamento' }, { status: 400 })
@@ -32,8 +33,9 @@ export async function POST(req: NextRequest) {
       ? 'Estado: esta dosis ya fue tomada.'
       : 'Estado: esta dosis sigue pendiente.'
 
+  const contextPrefix = userContext ? `${userContext}\n\n` : ''
   const userMessage =
-    `Dame un tip breve y útil para la ${contextLabel}, sin cambiar el tratamiento. ` +
+    `${contextPrefix}Dame un tip breve y útil para la ${contextLabel}, sin cambiar el tratamiento. ` +
     `Medicamento: "${medicationName}". ${dosePart} ${timePart} ${instructionsPart} ${statusPart}`.trim()
 
   try {

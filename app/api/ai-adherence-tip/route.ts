@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
   const missed = Number(body?.missed)
   const pending = Number(body?.pending)
   const adherenceRate = body?.adherenceRate !== undefined ? Number(body?.adherenceRate) : undefined
+  const userContext = (body?.userContext ?? '').toString().trim()
 
   if (scope !== 'week' && scope !== 'today') {
     return NextResponse.json({ error: 'Scope inválido' }, { status: 400 })
@@ -32,8 +33,9 @@ export async function POST(req: NextRequest) {
     ? ` Tasa de adherencia: ${Math.round((adherenceRate as number) * 100)}%.`
     : ''
 
+  const contextPrefix = userContext ? `${userContext}\n\n` : ''
   const userMessage =
-    `Dame un tip breve y útil para mejorar la adherencia de medicación ${label}. ` +
+    `${contextPrefix}Dame un tip breve y útil para mejorar la adherencia de medicación ${label}. ` +
     `Datos: tomé ${taken} de ${total}, me faltan ${pending}, olvidé ${missed}.` +
     rateTxt
 
