@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
 import { buildTipCacheKey, getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
-import type { KnowledgeAnswerSource } from '@/lib/api'
 import Link from 'next/link'
 
 const FREQ_OPTIONS = [
@@ -41,7 +40,6 @@ export default function NewMedicationPage() {
   const [saving, setSaving] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
-  const [aiSources, setAiSources] = useState<KnowledgeAnswerSource[] | null>(null)
   const [error, setError] = useState('')
 
   const handleAI = async () => {
@@ -56,49 +54,41 @@ export default function NewMedicationPage() {
       if (cached) {
         setInstructions(cached)
         setAiError('')
-        setAiSources(null)
         return
       }
 
      setAiError('')
      setAiLoading(true)
      try {
-      const qParts = [
-        `Dame instrucciones simples para tomar "${name}" sin cambiar el tratamiento.`,
-        dose?.trim() ? `Dosis: ${dose.trim()}.` : null,
-        conditions?.length ? `Condiciones: ${conditions.join(', ')}.` : null,
-        'Responde en 1-2 oraciones en español neutro, sin markdown ni tecnicismos.',
-      ].filter(Boolean)
-
-       const data = await api.knowledgeAnswer({
-         q: qParts.join(' '),
-         k: 6,
-         scoreMin: 0.7,
-         debug: false,
+       const res = await fetch('/api/ai-suggestions', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           medicationName: name,
+           dose,
+           conditions,
+           intent: 'instructions',
+         }),
        })
+       const data = await res.json().catch(() => ({}))
+       if (!res.ok) throw new Error(data?.error || 'No se pudo obtener sugerencia')
 
-       const text = (data?.answer ?? '').toString().trim()
+       const text = (data?.suggestion ?? '').toString().trim()
        if (text) {
          setInstructions(text)
-         const sources = data?.sources ?? null
-         setAiSources(sources)
-         // Only cache when the backend provides sources. Otherwise different meds
-         // can get stuck with the same generic fallback response.
-         if ((sources ?? []).length > 0) setCachedTip(cacheKey, text)
+         setCachedTip(cacheKey, text)
        } else {
          setAiError('No se pudo obtener sugerencia')
-         setAiSources(null)
        }
      } catch (e) {
        const msg = e instanceof Error ? e.message : 'Error de conexión'
        const friendly =
          msg.includes('401') || msg.toLowerCase().includes('unauthorized')
            ? 'Necesitás iniciar sesión para generar la sugerencia.'
-           : msg.includes('502')
-           ? 'El servicio de conocimiento está temporalmente no disponible. Probá de nuevo en unos minutos.'
+           : msg.includes('502') || msg.includes('503')
+           ? 'El servicio de IA está temporalmente no disponible. Probá de nuevo en unos minutos.'
            : msg
        setAiError(friendly)
-       setAiSources(null)
      } finally {
        setAiLoading(false)
      }
@@ -215,17 +205,10 @@ export default function NewMedicationPage() {
           {aiLoading && (
             <p className="text-xs text-muted-foreground animate-pulse">Consultando IA...</p>
           )}
-          {!!aiSources?.length && (
-            <div className="pt-2 border-t border-border">
-              <p className="text-xs font-semibold text-muted-foreground">Fuentes</p>
-              <div className="mt-1 space-y-1">
-                {aiSources.slice(0, 3).map((s) => (
-                  <p key={s.id} className="text-xs text-muted-foreground">
-                    {s.id}: {s.title ?? s.source} (p. {s.page})
-                  </p>
-                ))}
-              </div>
-            </div>
+          {!aiLoading && !aiError && !!instructions.trim() && (
+            <p className="text-xs text-muted-foreground">
+              Sugerencia generada con política de fuentes oficiales MINSA / OMS.
+            </p>
           )}
         </div>
 
