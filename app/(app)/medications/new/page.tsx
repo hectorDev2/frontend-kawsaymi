@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
 import { buildTipCacheKey, getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
+import { useHealthContext } from '@/lib/health-context'
 import Link from 'next/link'
 
 const FREQ_OPTIONS = [
@@ -31,6 +32,7 @@ function buildSchedule(startDate: string, times: string[]): string[] {
 export default function NewMedicationPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const healthContext = useHealthContext()
 
   const [name, setName] = useState('')
   const [dose, setDose] = useState('')
@@ -68,6 +70,7 @@ export default function NewMedicationPage() {
            dose,
            conditions,
            intent: 'instructions',
+           userContext: healthContext,
          }),
        })
        const data = await res.json().catch(() => ({}))
