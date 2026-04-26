@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { buildTrustedHealthSourcesInstruction } from '@/lib/trusted-health-sources'
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
@@ -13,6 +14,9 @@ export async function POST(req: NextRequest) {
   const medicationName = (body?.medicationName ?? '').toString().trim()
   const dose = (body?.dose ?? '').toString().trim()
   const scheduledTime = (body?.scheduledTime ?? '').toString().trim() // ISO preferred
+  const eventStatus = (body?.eventStatus ?? 'PENDING').toString().trim().toUpperCase()
+  const instructions = (body?.instructions ?? '').toString().trim()
+  const contextLabel = (body?.contextLabel ?? 'toma de hoy').toString().trim()
 
   if (!medicationName) {
     return NextResponse.json({ error: 'Falta nombre del medicamento' }, { status: 400 })
@@ -20,10 +24,17 @@ export async function POST(req: NextRequest) {
 
   const timePart = scheduledTime ? `Hora programada: ${scheduledTime}.` : ''
   const dosePart = dose ? `Dosis: ${dose}.` : ''
+  const instructionsPart = instructions ? `Indicaciones registradas: ${instructions}.` : ''
+  const statusPart =
+    eventStatus === 'MISSED'
+      ? 'Estado: el usuario no pudo tomar esta dosis.'
+      : eventStatus === 'TAKEN'
+      ? 'Estado: esta dosis ya fue tomada.'
+      : 'Estado: esta dosis sigue pendiente.'
 
   const userMessage =
-    `Dame un tip breve para acordarme de tomar mi medicamento ahora, sin cambiar el tratamiento. ` +
-    `Medicamento: "${medicationName}". ${dosePart} ${timePart}`
+    `Dame un tip breve y útil para la ${contextLabel}, sin cambiar el tratamiento. ` +
+    `Medicamento: "${medicationName}". ${dosePart} ${timePart} ${instructionsPart} ${statusPart}`.trim()
 
   try {
     const res = await fetch(GROQ_URL, {
@@ -38,9 +49,11 @@ export async function POST(req: NextRequest) {
           {
             role: 'system',
               content:
-              'Eres un acompañante de salud que ayuda a adultos mayores a tomar sus medicamentos a tiempo. ' +
+              'Eres un acompañante de salud que ayuda a adultos mayores a resolver la toma actual de sus medicamentos. ' +
               'Responde SOLO con 1-2 oraciones cortas en español neutro, sin tecnicismos ni markdown. ' +
-              'No des indicaciones médicas específicas ni cambies dosis; enfócate en hábitos y recordatorios simples.',
+              'No des indicaciones médicas específicas ni cambies dosis; enfócate en la toma actual, hábitos y recordatorios simples. ' +
+              'La respuesta debe servir para la dosis de hoy y mencionar, si ayuda, la hora o la rutina inmediata. ' +
+              buildTrustedHealthSourcesInstruction(),
           },
           { role: 'user', content: userMessage },
         ],

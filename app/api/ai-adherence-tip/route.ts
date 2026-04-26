@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { buildTrustedHealthSourcesInstruction } from '@/lib/trusted-health-sources'
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
@@ -51,7 +52,8 @@ export async function POST(req: NextRequest) {
               content:
               'Eres un acompañante de salud que ayuda a adultos mayores a tomar sus medicamentos a tiempo. ' +
               'Responde SOLO con 1-2 oraciones cortas en español neutro, sin tecnicismos ni markdown. ' +
-              'No des indicaciones médicas específicas ni cambies tratamientos; enfócate en hábitos y recordatorios simples.',
+              'No des indicaciones médicas específicas ni cambies tratamientos; enfócate en hábitos y recordatorios simples. ' +
+              buildTrustedHealthSourcesInstruction(),
           },
           { role: 'user', content: userMessage },
         ],
