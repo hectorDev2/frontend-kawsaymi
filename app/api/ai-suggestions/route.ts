@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     ? body.conditions.map((value: unknown) => String(value).trim()).filter(Boolean)
     : []
   const intent = (body?.intent ?? 'instructions').toString().trim()
+  const userContext = (body?.userContext ?? '').toString().trim()
 
   if (!medicationName) {
     return NextResponse.json({ error: 'Falta nombre del medicamento' }, { status: 400 })
@@ -27,11 +28,12 @@ export async function POST(req: NextRequest) {
     conditions.length && `Condiciones del paciente: ${conditions.join(', ')}`,
   ].filter(Boolean).join('. ')
 
+  const contextPrefix = userContext ? `${userContext}\n\n` : ''
   const userMessage =
     intent === 'card-tip'
-      ? `Dame una sugerencia breve y útil para tomar "${medicationName}"${contextParts ? `. ${contextParts}` : ''}. ` +
+      ? `${contextPrefix}Dame una sugerencia breve y útil para tomar "${medicationName}"${contextParts ? `. ${contextParts}` : ''}. ` +
         'Formato estricto: 1) Cómo tomarlo: ... 2) Con qué tomarlo: ... 3) Precaución: ...'
-      : `Dame instrucciones simples para tomar "${medicationName}"${contextParts ? `. ${contextParts}` : ''}.`
+      : `${contextPrefix}Dame instrucciones simples para tomar "${medicationName}"${contextParts ? `. ${contextParts}` : ''}.`
 
   try {
     const res = await fetch(GROQ_URL, {

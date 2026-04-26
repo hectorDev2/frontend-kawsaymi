@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const field = (body?.field ?? '').toString().trim()
   const data = safeData(body)
+  const userContext = (body?.userContext ?? '').toString().trim()
 
   if (!field) {
     return NextResponse.json({ error: 'Falta campo a evaluar' }, { status: 400 })
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
           },
           {
             role: 'user',
-            content: `Dame una sugerencia breve para el campo "${label}" usando este contexto del paciente: ${JSON.stringify(data)}. Si falta información, decí qué conviene completar primero.`,
+            content: `${userContext ? `${userContext}\n\n` : ''}Dame una sugerencia breve para el campo "${label}" usando este contexto del paciente: ${JSON.stringify(data)}. Si falta información, decí qué conviene completar primero.`,
           },
         ],
         max_tokens: 140,
