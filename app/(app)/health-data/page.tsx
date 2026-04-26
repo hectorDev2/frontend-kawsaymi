@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { api } from '@/lib/api'
 import type { HealthProfile, PolypharmacyInfo } from '@/lib/api'
+import { useHealthContext } from '@/lib/health-context'
 import {
   DEFAULT_WELLNESS_FORM,
   MEAL_CONFIG,
@@ -62,6 +63,7 @@ function FieldTipButton({ field, data }: { field: string; data: WellnessFormStat
   const [loading, setLoading] = useState(false)
   const [tip, setTip] = useState('')
   const [error, setError] = useState('')
+  const healthContext = useHealthContext()
 
   const loadTip = async (force?: boolean) => {
     if (!force && tip) return
@@ -72,7 +74,7 @@ function FieldTipButton({ field, data }: { field: string; data: WellnessFormStat
       const res = await fetch('/api/ai-health-tip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field, data }),
+        body: JSON.stringify({ field, data, userContext: healthContext }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json?.error || 'No se pudo generar la sugerencia')

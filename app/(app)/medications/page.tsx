@@ -11,6 +11,7 @@ import { buildTipCacheKey, getCachedTip, setCachedTip } from '@/lib/ai-tip-cache
 import type { Medication, MedicationEvent } from '@/lib/api'
 import Link from 'next/link'
 import { onDataChanged } from '@/lib/data-events'
+import { useHealthContext } from '@/lib/health-context'
 
 const PILL_COLORS = [
   'bg-blue-50 text-blue-700 border-blue-200',
@@ -49,6 +50,7 @@ function MedicationTip({
   const [loading, setLoading] = useState(false)
   const [suggestion, setSuggestion] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const healthContext = useHealthContext()
 
   const loadTip = async (opts?: { force?: boolean }) => {
     const key = buildTipCacheKey({ medicationId, medicationName, dose })
@@ -71,6 +73,7 @@ function MedicationTip({
           medicationName,
           dose,
           intent: 'card-tip',
+          userContext: healthContext,
         }),
       })
       const data = await res.json().catch(() => ({}))
