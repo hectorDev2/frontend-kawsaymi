@@ -150,12 +150,16 @@ function EventDoseTip({
   dose,
   scheduledIso,
   scheduledLabel,
+  instructions,
+  eventStatus,
 }: {
   eventId: string
   medicationName: string
   dose: string
   scheduledIso: string
   scheduledLabel: string
+  instructions?: string
+  eventStatus: MedicationEvent['status']
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -183,6 +187,9 @@ function EventDoseTip({
           medicationName,
           dose,
           scheduledTime: scheduledLabel,
+          instructions,
+          eventStatus,
+          contextLabel: 'toma de hoy',
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -227,7 +234,7 @@ function EventDoseTip({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold leading-tight">Tip</p>
-            <p className="text-xs text-muted-foreground">Para {medicationName}</p>
+            <p className="text-xs text-muted-foreground">Para la toma de las {scheduledLabel}</p>
           </div>
           <Button
             type="button"
@@ -246,7 +253,12 @@ function EventDoseTip({
           ) : error ? (
             <p className="text-destructive">{error}</p>
           ) : (
-            <p className="leading-relaxed">{tip}</p>
+            <div className="space-y-2">
+              <p className="leading-relaxed">{tip}</p>
+              <p className="text-xs text-muted-foreground">
+                Tip contextual para la toma de hoy de {medicationName}.
+              </p>
+            </div>
           )}
         </div>
       </PopoverContent>
@@ -454,6 +466,8 @@ function PatientDashboard({ user }: { user: any }) {
                           dose={evt.medicationDose ?? ''}
                           scheduledIso={evt.dateTimeScheduled}
                           scheduledLabel={time}
+                          instructions={medications.find((m) => m.id === evt.medicationId)?.instructions}
+                          eventStatus={evt.status}
                         />
                         <button
                           onClick={() => handleMark(evt.id, 'taken')}
