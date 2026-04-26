@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,12 +60,32 @@ const EMPTY_FORM: VaccineForm = {
   file: null,
 }
 
+const VACCINES_STORAGE_KEY = 'kw_vaccines:v1'
+
+function serializeRecords(records: VaccineRecord[]) {
+  return records.map(({ file: _file, ...rest }) => rest)
+}
+
 export default function VaccinesPage() {
   const router = useRouter()
   const { toast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<VaccineForm>(EMPTY_FORM)
-  const [records, setRecords] = useState<VaccineRecord[]>([])
+  const [records, setRecords] = useState<VaccineRecord[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const saved = window.localStorage.getItem(VACCINES_STORAGE_KEY)
+      if (saved) return (JSON.parse(saved) as Omit<VaccineRecord, 'file'>[]).map((r) => ({ ...r, file: null }))
+    } catch {
+      window.localStorage.removeItem(VACCINES_STORAGE_KEY)
+    }
+    return []
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(VACCINES_STORAGE_KEY, JSON.stringify(serializeRecords(records)))
+  }, [records])
 
   const set = (field: keyof VaccineForm, value: string | File | null) =>
     setForm((f) => ({ ...f, [field]: value }))
