@@ -66,14 +66,14 @@ export default function CaregiversPage() {
 
   return (
     <div className="space-y-6 px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Mis cuidadores</h1>
           <p className="text-muted-foreground mt-1">
             Gestioná quién puede acceder a tu información de salud
           </p>
         </div>
-        <Button onClick={() => setShowInvite(!showInvite)}>
+        <Button onClick={() => setShowInvite(!showInvite)} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Agregar un cuidador
         </Button>
@@ -122,17 +122,17 @@ export default function CaregiversPage() {
                         {caregiver.initials}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{caregiver.name}</h3>
-                      <div className="flex gap-3 mt-1">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold truncate">{caregiver.name}</h3>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
                         {caregiver.email && (
-                          <a href={`mailto:${caregiver.email}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition">
-                            <Mail className="w-3 h-3" />
-                            {caregiver.email}
+                          <a href={`mailto:${caregiver.email}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition min-w-0">
+                            <Mail className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{caregiver.email}</span>
                           </a>
                         )}
                         {caregiver.phone && (
-                          <a href={`tel:${caregiver.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition">
+                          <a href={`tel:${caregiver.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition flex-shrink-0">
                             <Phone className="w-3 h-3" />
                             {caregiver.phone}
                           </a>

@@ -120,7 +120,7 @@ export default function AlertsPage() {
         </Card>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button variant={filter === 'all' ? 'default' : 'outline'} onClick={() => setFilter('all')}>
           Todas
         </Button>
@@ -146,21 +146,21 @@ export default function AlertsPage() {
                   <div className={`p-2 rounded-lg ${severityBadge[alert.severity]} text-white flex-shrink-0`}>
                     <AlertCircle className="w-5 h-5" />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-2">
+                      <div className="min-w-0">
                         <h3 className="font-semibold">{alert.title}</h3>
                         <p className="text-sm mt-1">{alert.patientName}</p>
                         <p className="text-xs opacity-75 mt-2">{alert.description}</p>
                       </div>
-                      <div className="text-right text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                      <div className="text-xs text-muted-foreground sm:whitespace-nowrap flex-shrink-0">
                         {alert.timestamp}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-4 ml-14">
+                <div className="flex flex-wrap gap-2 mt-4 sm:ml-14">
                   {!alert.read && (
                     <Button
                       size="sm"
