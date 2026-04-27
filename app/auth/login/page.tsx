@@ -28,7 +28,7 @@ export default function LoginPage() {
     } catch {
       toast({
         title: 'No pudimos iniciar sesión',
-        description: 'Verificá tu correo y contraseña',
+        description: 'Verifica tu correo y contraseña',
         variant: 'destructive',
       })
     } finally {
@@ -52,7 +52,7 @@ export default function LoginPage() {
         {/* Form */}
         <div className="-mt-5 bg-background rounded-t-3xl md:rounded-none md:mt-0 px-6 pt-8 pb-10 md:px-8">
           <h2 className="text-2xl font-bold mb-1">Bienvenido</h2>
-          <p className="text-muted-foreground mb-8">Ingresá tus datos para continuar</p>
+          <p className="text-muted-foreground mb-8">Ingresa tus datos para continuar</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
@@ -99,7 +99,7 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            ¿No tenés cuenta?{' '}
+            ¿No tienes cuenta?{' '}
             <Link href="/auth/signup" className="text-primary font-bold hover:underline">
               Registrarse
             </Link>

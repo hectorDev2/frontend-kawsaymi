@@ -82,32 +82,32 @@ export default function RootPage() {
       <section className="bg-card border-y border-border py-20">
         <div className="max-w-6xl mx-auto px-6">
           <p className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-12">
-            Todo lo que necesitás para tu salud
+            Todo lo que necesitas para tu salud
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
                 icon: Pill,
                 title: 'Seguimiento fácil',
-                desc: 'Registrá tus medicamentos con un solo toque',
+                desc: 'Registra tus medicamentos con un solo toque',
                 color: 'text-primary bg-primary/10',
               },
               {
                 icon: BarChart3,
                 title: 'Análisis inteligente',
-                desc: 'Seguí tu adherencia con datos detallados',
+                desc: 'Sigue tu adherencia con datos detallados',
                 color: 'text-secondary bg-secondary/10',
               },
               {
                 icon: Users,
                 title: 'Apoyo de cuidadores',
-                desc: 'Compartí tu progreso con personas de confianza',
+                desc: 'Comparte tu progreso con personas de confianza',
                 color: 'text-primary bg-primary/10',
               },
               {
                 icon: Clock,
                 title: 'Recordatorios',
-                desc: 'Nunca más olvidés tomar tu medicación',
+                desc: 'Nunca más olvides tomar tu medicación',
                 color: 'text-secondary bg-secondary/10',
               },
             ].map((f) => (

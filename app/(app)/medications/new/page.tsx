@@ -46,7 +46,7 @@ export default function NewMedicationPage() {
 
   const handleAI = async () => {
     if (!name.trim()) {
-      setAiError('Primero escribí el nombre del medicamento')
+      setAiError('Primero escribe el nombre del medicamento')
       return
     }
 
@@ -87,9 +87,9 @@ export default function NewMedicationPage() {
        const msg = e instanceof Error ? e.message : 'Error de conexión'
        const friendly =
          msg.includes('401') || msg.toLowerCase().includes('unauthorized')
-           ? 'Necesitás iniciar sesión para generar la sugerencia.'
+           ? 'Necesitas iniciar sesión para generar la sugerencia.'
            : msg.includes('502') || msg.includes('503')
-           ? 'El servicio de IA está temporalmente no disponible. Probá de nuevo en unos minutos.'
+           ? 'El servicio de IA está temporalmente no disponible. Intenta de nuevo en unos minutos.'
            : msg
        setAiError(friendly)
      } finally {
@@ -148,7 +148,7 @@ export default function NewMedicationPage() {
 
         {/* Dosis */}
         <div className="card-elevated p-5 space-y-2">
-          <label className="text-sm font-semibold">¿Cuánto tomás por vez?</label>
+          <label className="text-sm font-semibold">¿Cuánto tomas por vez?</label>
           <Input
             placeholder="Ej: 500mg, 1 comprimido, 10ml..."
             value={dose}

@@ -61,13 +61,13 @@ export async function POST(req: NextRequest) {
           {
             role: 'system',
             content:
-              'Sos un educador en salud preventiva. Respondé en español rioplatense con 2 oraciones cortas, cálidas y accionables. ' +
-              'No des diagnósticos ni cambies tratamientos. Enfocate en hábitos cotidianos y aclaraciones prudentes. ' +
+              'Eres un educador en salud preventiva. Responde en español neutro con 2 oraciones cortas, cálidas y accionables. ' +
+              'No des diagnósticos ni cambies tratamientos. Enfócate en hábitos cotidianos y aclaraciones prudentes. ' +
               buildTrustedHealthSourcesInstruction(),
           },
           {
             role: 'user',
-            content: `${userContext ? `${userContext}\n\n` : ''}Dame una sugerencia breve para el campo "${label}" usando este contexto del paciente: ${JSON.stringify(data)}. Si falta información, decí qué conviene completar primero.`,
+            content: `${userContext ? `${userContext}\n\n` : ''}Dame una sugerencia breve para el campo "${label}" usando este contexto del paciente: ${JSON.stringify(data)}. Si falta información, di qué conviene completar primero.`,
           },
         ],
         max_tokens: 140,

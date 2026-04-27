@@ -130,13 +130,13 @@ function buildPriorities(data: WellnessFormState, health?: HealthContext) {
   const meals = normalizedMealCount(data.nutrition)
   const priorities: string[] = []
 
-  if (meals < 3) priorities.push('Completá al menos desayuno, almuerzo y cena con opciones simples y repetibles.')
-  if (!data.habits.hydration || data.habits.hydration === 'low') priorities.push('Subí tu hidratación diaria con una meta visible y medible.')
-  if (sleep === null || sleep < 7) priorities.push('Protegé una rutina de sueño más estable para llegar a 7–8 horas.')
-  if (!data.habits.activity || data.habits.activity === 'low') priorities.push('Sumá movimiento diario de baja barrera antes de pensar en entrenamientos complejos.')
-  if (data.habits.smoking) priorities.push('Definí una estrategia concreta para reducir o suspender el tabaco con apoyo profesional.')
-  if (data.habits.alcohol === 'frequent') priorities.push('Reducí la frecuencia de alcohol y registrá disparadores o contextos de consumo.')
-  if (data.habits.mood === 'low') priorities.push('Agendá espacios de recuperación emocional y pedí ayuda si el ánimo no mejora.')
+  if (meals < 3) priorities.push('Completa al menos desayuno, almuerzo y cena con opciones simples y repetibles.')
+  if (!data.habits.hydration || data.habits.hydration === 'low') priorities.push('Sube tu hidratación diaria con una meta visible y medible.')
+  if (sleep === null || sleep < 7) priorities.push('Protege una rutina de sueño más estable para llegar a 7–8 horas.')
+  if (!data.habits.activity || data.habits.activity === 'low') priorities.push('Suma movimiento diario de baja barrera antes de pensar en entrenamientos complejos.')
+  if (data.habits.smoking) priorities.push('Define una estrategia concreta para reducir o suspender el tabaco con apoyo profesional.')
+  if (data.habits.alcohol === 'frequent') priorities.push('Reduce la frecuencia de alcohol y registra disparadores o contextos de consumo.')
+  if (data.habits.mood === 'low') priorities.push('Agenda espacios de recuperación emocional y pide ayuda si el ánimo no mejora.')
   if (health?.imc && health.imc >= 30) priorities.push('Monitoreá peso e IMC semanalmente con foco en consistencia, no en cambios extremos.')
 
   if (priorities.length === 0) {
@@ -156,7 +156,7 @@ function buildWeeks(data: WellnessFormState, health?: HealthContext): WellnessPl
       key: 'week1',
       title: 'Semana 1',
       tasks: [
-        mealsMissing ? 'Definí una base de desayuno, almuerzo y cena para evitar improvisar.' : 'Repetí tu estructura actual de comidas y detectá qué horarios te cuestan más.',
+        mealsMissing ? 'Define una base de desayuno, almuerzo y cena para evitar improvisar.' : 'Repite tu estructura actual de comidas y detecta qué horarios te cuestan más.',
         'Tomá nota de agua, energía y apetito al final del día.',
       ],
     },
@@ -164,24 +164,24 @@ function buildWeeks(data: WellnessFormState, health?: HealthContext): WellnessPl
       key: 'week2',
       title: 'Semana 2',
       tasks: [
-        !data.habits.hydration || data.habits.hydration === 'low' ? 'Usá recordatorios o una botella visible para mejorar la hidratación.' : 'Sostené tu nivel de hidratación y revisá si podés distribuirlo mejor durante el día.',
-        sleep === null || sleep < 7 ? 'Ajustá una hora fija para acostarte y protegé tu rutina nocturna.' : 'Conservá tu rutina de sueño y evitá romperla en días de semana.',
+        !data.habits.hydration || data.habits.hydration === 'low' ? 'Usa recordatorios o una botella visible para mejorar la hidratación.' : 'Mantén tu nivel de hidratación y revisa si puedes distribuirlo mejor durante el día.',
+        sleep === null || sleep < 7 ? 'Ajusta una hora fija para acostarte y protege tu rutina nocturna.' : 'Conserva tu rutina de sueño y evita romperla en días de semana.',
       ],
     },
     {
       key: 'week3',
       title: 'Semana 3',
       tasks: [
-        !data.habits.activity || data.habits.activity === 'low' ? 'Agregá caminatas o movilidad 15–20 minutos por día.' : 'Escalá la actividad física sin saltos bruscos, priorizando continuidad.',
-        data.habits.mood === 'low' ? 'Chequeá tu ánimo y buscá actividades de descarga mental o apoyo cercano.' : 'Relacioná tu energía y tu ánimo con las comidas y el descanso.',
+        !data.habits.activity || data.habits.activity === 'low' ? 'Agrega caminatas o movilidad 15–20 minutos por día.' : 'Escala la actividad física sin saltos bruscos, priorizando continuidad.',
+        data.habits.mood === 'low' ? 'Revisa tu ánimo y busca actividades de descarga mental o apoyo cercano.' : 'Relaciona tu energía y tu ánimo con las comidas y el descanso.',
       ],
     },
     {
       key: 'week4',
       title: 'Semana 4',
       tasks: [
-        health?.weight ? 'Compará peso, energía y adherencia para decidir el siguiente ajuste.' : 'Hacé una revisión final de hábitos y definí qué métrica vas a seguir el próximo mes.',
-        data.habits.smoking || data.habits.alcohol === 'frequent' ? 'Revisá los factores de riesgo y considerá apoyo profesional para sostener cambios.' : 'Consolidá lo que funcionó y eliminá lo que te genera fricción innecesaria.',
+        health?.weight ? 'Compara peso, energía y adherencia para decidir el siguiente ajuste.' : 'Haz una revisión final de hábitos y define qué métrica vas a seguir el próximo mes.',
+        data.habits.smoking || data.habits.alcohol === 'frequent' ? 'Revisa los factores de riesgo y considera apoyo profesional para sostener cambios.' : 'Consolida lo que funcionó y elimina lo que te genera fricción innecesaria.',
       ],
     },
   ]
@@ -207,27 +207,27 @@ export function generateWellnessPlan(data: WellnessFormState, health?: HealthCon
 export function getFieldFallbackSuggestion(field: string, data: WellnessFormState) {
   switch (field) {
     case 'breakfast':
-      return 'Buscá un desayuno con proteína + fibra, por ejemplo yogurt natural con fruta o pan integral con huevo. La idea es arrancar con saciedad real, no con azúcar rápida.'
+      return 'Busca un desayuno con proteína + fibra, por ejemplo yogurt natural con fruta o pan integral con huevo. La idea es arrancar con saciedad real, no con azúcar rápida.'
     case 'lunch':
-      return 'En el almuerzo usá una estructura simple: 1 fuente de proteína, 1 porción de vegetales y 1 carbohidrato medido. Si podés repetir esa base, ganás adherencia.'
+      return 'En el almuerzo usa una estructura simple: 1 fuente de proteína, 1 porción de vegetales y 1 carbohidrato medido. Si puedes repetir esa base, ganas adherencia.'
     case 'dinner':
-      return 'Para la cena conviene algo liviano pero suficiente: verduras + proteína y poca carga ultraprocesada. Si cenás muy tarde, evitá porciones pesadas.'
+      return 'Para la cena conviene algo liviano pero suficiente: verduras + proteína y poca carga ultraprocesada. Si cenas muy tarde, evita porciones pesadas.'
     case 'snack':
       return 'Un snack útil no es “picar por ansiedad”; es una colación estratégica. Fruta, yogurt o frutos secos suelen funcionar mejor que productos con azúcar añadida.'
     case 'hydration':
       return data.habits.hydration === 'low'
-        ? 'Si hoy tu hidratación es baja, no intentes compensar todo junto. Repartí agua durante el día y dejala visible para bajar la fricción.'
-        : 'Mantené una hidratación distribuida durante el día. El color de la orina y la sed frecuente te pueden dar señales prácticas.'
+        ? 'Si hoy tu hidratación es baja, no intentes compensar todo junto. Reparte agua durante el día y déjala visible para bajar la fricción.'
+        : 'Mantén una hidratación distribuida durante el día. El color de la orina y la sed frecuente te pueden dar señales prácticas.'
     case 'sleepHours':
-      return 'Dormir bien no es un lujo, es infraestructura biológica. Si estás por debajo de 7 horas, priorizá una rutina nocturna consistente antes de buscar hacks.'
+      return 'Dormir bien no es un lujo, es infraestructura biológica. Si estás por debajo de 7 horas, prioriza una rutina nocturna consistente antes de buscar hacks.'
     case 'activity':
       return data.habits.activity === 'low'
-        ? 'Empezá por movimiento sostenible: caminar, movilidad o ejercicios suaves todos los días. La constancia le gana a la intensidad improvisada.'
-        : 'Si ya tenés actividad, medila por consistencia semanal. Subir carga sin recuperar bien suele romper el hábito.'
+        ? 'Empieza por movimiento sostenible: caminar, movilidad o ejercicios suaves todos los días. La constancia le gana a la intensidad improvisada.'
+        : 'Si ya tienes actividad, mídela por consistencia semanal. Subir carga sin recuperar bien suele romper el hábito.'
     case 'alcohol':
       return 'Registrar frecuencia y contexto del alcohol sirve más que minimizarlo mentalmente. El objetivo es entender el patrón para después corregirlo.'
     case 'smoking':
-      return 'Si fumás, cualquier reducción ya cuenta. Pero OJO: lo más efectivo suele ser combinar una meta concreta con apoyo médico o conductual.'
+      return 'Si fumas, cualquier reducción ya cuenta. Pero OJO: lo más efectivo suele ser combinar una meta concreta con apoyo médico o conductual.'
     case 'mood':
       return 'Tu estado de ánimo influye en sueño, comida y adherencia. Si notás bajón sostenido, no lo trates como un detalle menor.'
     default:

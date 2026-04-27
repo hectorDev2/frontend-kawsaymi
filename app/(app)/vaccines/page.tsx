@@ -92,7 +92,7 @@ export default function VaccinesPage() {
 
   const handleAdd = () => {
     if (!form.name) {
-      toast({ title: 'Falta la vacuna', description: 'Seleccioná el nombre de la vacuna', variant: 'destructive' })
+      toast({ title: 'Falta la vacuna', description: 'Selecciona el nombre de la vacuna', variant: 'destructive' })
       return
     }
     setRecords((r) => [...r, { ...form, id: crypto.randomUUID() }])
@@ -116,7 +116,7 @@ export default function VaccinesPage() {
           <Syringe className="h-8 w-8 text-primary flex-shrink-0" />
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Registro de Vacunas</h1>
-            <p className="text-muted-foreground mt-0.5">Registrá y visualizá tu historial de vacunación</p>
+            <p className="text-muted-foreground mt-0.5">Registra y visualiza tu historial de vacunación</p>
           </div>
         </div>
 
@@ -135,7 +135,7 @@ export default function VaccinesPage() {
             </div>
             <Select value={form.name} onValueChange={(v) => set('name', v)}>
               <SelectTrigger className="h-12 text-base">
-                <SelectValue placeholder="Seleccioná una vacuna" />
+                <SelectValue placeholder="Selecciona una vacuna" />
               </SelectTrigger>
               <SelectContent>
                 {VACCINES.map((v) => (

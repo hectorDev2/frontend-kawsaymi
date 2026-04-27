@@ -86,9 +86,9 @@ function MedicationTip({
       const msg = e instanceof Error ? e.message : 'Error de conexión'
       const friendly =
         msg.includes('401') || msg.toLowerCase().includes('unauthorized')
-          ? 'Necesitás iniciar sesión para generar el tip.'
+          ? 'Necesitas iniciar sesión para generar el tip.'
           : msg.includes('502') || msg.includes('503')
-          ? 'El servicio de IA está temporalmente no disponible. Probá de nuevo en unos minutos.'
+          ? 'El servicio de IA está temporalmente no disponible. Intenta de nuevo en unos minutos.'
           : msg
       setError(friendly)
       setSuggestion(null)

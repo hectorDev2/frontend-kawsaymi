@@ -118,7 +118,7 @@ export default function ClinicalHistoryPage() {
           Volver al Dashboard
         </Button>
         <h1 className="text-2xl md:text-3xl font-bold text-primary">Historial Clínico</h1>
-        <p className="text-muted-foreground mt-1">Mantené actualizada tu información médica</p>
+        <p className="text-muted-foreground mt-1">Mantén actualizada tu información médica</p>
       </div>
 
       <div className="card-elevated p-6 space-y-6">
@@ -132,7 +132,7 @@ export default function ClinicalHistoryPage() {
           <Textarea
             id="antecedentes"
             rows={4}
-            placeholder="Describí cualquier condición médica previa o antecedente familiar relevante"
+            placeholder="Describe cualquier condición médica previa o antecedente familiar relevante"
             value={form.antecedentes}
             onChange={(e) => setForm((f) => ({ ...f, antecedentes: e.target.value }))}
             className="text-base resize-none"
@@ -169,7 +169,7 @@ export default function ClinicalHistoryPage() {
           <Textarea
             id="cirugias"
             rows={3}
-            placeholder="Listá cirugías que hayas tenido (separadas por comas)"
+            placeholder="Lista las cirugías que hayas tenido (separadas por comas)"
             value={form.cirugias}
             onChange={(e) => setForm((f) => ({ ...f, cirugias: e.target.value }))}
             className="text-base resize-none"
