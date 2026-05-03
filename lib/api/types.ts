@@ -145,6 +145,8 @@ export interface KnowledgeMatch {
   page: number
   chunkIndex: number
   content: string
+  category: string | null
+  tags: string[] | null
   score: number
   docSource: string
   docTitle: string | null
@@ -168,6 +170,8 @@ export interface KnowledgeAnswerSource {
   title: string | null
   page: number
   chunkIndex: number
+  category?: string | null
+  tags?: string[] | null
   score: number
 }
 
