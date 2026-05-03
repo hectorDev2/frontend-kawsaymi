@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { api } from '@/lib/api'
-import { buildHealthContext, type UserHealthData } from '@/lib/user-health-context'
+import { buildHealthContext, buildShortHealthContext, type UserHealthData } from '@/lib/user-health-context'
 
 const WELLNESS_KEY = 'kw_wellness_planner:v1'
 const CLINICAL_KEY = 'kw_clinical_history:v1'
@@ -55,6 +55,7 @@ export function HealthContextProvider({ children }: { children: ReactNode }) {
         data.name = u.name
         data.conditions = u.conditions
         data.allergies = u.allergies
+        data.bloodType = u.bloodType ?? null
       }
       if (polyRes.status === 'fulfilled') {
         data.activeMedications = polyRes.value.activeMedications
