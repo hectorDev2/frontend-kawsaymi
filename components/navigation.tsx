@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Home, Pill, Activity, Heart, Users, AlertCircle, Settings, LogOut, ChevronRight, User, ClipboardList, Syringe } from 'lucide-react'
+import { Home, Pill, Activity, Heart, Users, AlertCircle, Settings, LogOut, ChevronRight, User, ClipboardList, Syringe, Brain } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +28,7 @@ export function Navigation() {
     { label: 'Medicamentos', href: '/medications', icon: Pill },
     { label: 'Mis pastillas', href: '/adherence', icon: Activity },
     { label: 'Mi salud', href: '/health-data', icon: Heart },
+    { label: 'Asistente IA', href: '/knowledge/chat', icon: Brain },
     { label: 'Historial', href: '/clinical-history', icon: ClipboardList },
     { label: 'Vacunas', href: '/vaccines', icon: Syringe },
     { label: 'Cuidadores', href: '/caregivers', icon: Users },
@@ -41,8 +42,8 @@ export function Navigation() {
 
   const navItems = user?.role === 'PATIENT' ? patientNav : caregiverNav
 
-  // Bottom nav muestra solo los primeros 4 ítems en mobile
-  const bottomNavItems = navItems.slice(0, 4)
+  // Bottom nav muestra solo los primeros 5 ítems en mobile (incluye Asistente IA)
+  const bottomNavItems = navItems.slice(0, 5)
 
   const isActive = (href: string) => pathname === href
   const userInitials = (user?.name ?? '?').split(' ').map((w) => w[0]).slice(0, 2).join('')

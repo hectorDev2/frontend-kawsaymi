@@ -22,7 +22,7 @@ import { emitDataChanged } from '@/lib/data-events'
 const DEFAULT_BASE =
   process.env.NODE_ENV === 'production'
     ? 'https://kawsaymi-care-backend.onrender.com'
-    : 'http://localhost:3000'
+    : 'http://localhost:3001'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || DEFAULT_BASE
 // Keep this stable across mock/real so users don't "lose" sessions when switching.
