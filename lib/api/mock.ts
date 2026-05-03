@@ -20,6 +20,7 @@ import type {
   MedicationStatus,
   EventsQuery,
   Session,
+  MedicalBackground,
 } from './types'
 
 import { emitDataChanged } from '@/lib/data-events'
@@ -71,6 +72,8 @@ interface StoredUser extends AuthUser {
   timezone?: string
   allergies?: string[]
   conditions?: string[]
+  bloodType?: string | null
+  medicalBackground?: MedicalBackground
 }
 
 const SEED_USERS: StoredUser[] = [
@@ -212,6 +215,7 @@ function userToProfile(u: StoredUser): UserProfile {
     timezone: u.timezone,
     allergies: u.allergies,
     conditions: u.conditions,
+    bloodType: u.bloodType,
   }
 }
 
@@ -381,6 +385,37 @@ export const mockApi: ApiContract = {
     const idx = users.findIndex((u) => u.id === user.id)
     if (idx !== -1) {
       users[idx].conditions = conditions
+      save(KEYS.users, users)
+      save(KEYS.currentUser, users[idx])
+      emitDataChanged('user')
+    }
+  },
+
+  async updateMedicalBackground(background: MedicalBackground) {
+    await delay()
+    const user = requireAuth()
+    const users = load<StoredUser[]>(KEYS.users, [])
+    const idx = users.findIndex((u) => u.id === user.id)
+    if (idx !== -1) {
+      if (background.bloodType !== undefined) {
+        users[idx].bloodType = background.bloodType
+      }
+      if (background.conditions !== undefined) {
+        users[idx].conditions = background.conditions
+      }
+      if (background.allergies !== undefined) {
+        users[idx].allergies = background.allergies
+      }
+      users[idx].medicalBackground = {
+        bloodType: background.bloodType,
+        conditions: background.conditions ?? users[idx].conditions ?? [],
+        allergies: background.allergies ?? users[idx].allergies ?? [],
+        surgeries: background.surgeries ?? '',
+        hospitalizations: background.hospitalizations ?? '',
+        transfusions: background.transfusions ?? null,
+        vaccines: background.vaccines ?? '',
+        otherBackground: background.otherBackground ?? '',
+      }
       save(KEYS.users, users)
       save(KEYS.currentUser, users[idx])
       emitDataChanged('user')
