@@ -111,6 +111,10 @@ export const httpApi: ApiContract = {
     await req('PUT', '/users/me/conditions', { conditions })
     emitDataChanged('user')
   },
+  async updateMedicalBackground(background: import('./types').MedicalBackground) {
+    await req('PUT', '/users/me/medical-background', background)
+    emitDataChanged('user')
+  },
   async deleteMe() {
     const res = await req<{ success: boolean }>('DELETE', '/users/me')
     emitDataChanged('user')
@@ -206,6 +210,11 @@ export const httpApi: ApiContract = {
   },
   async updateWeight(weight: number) {
     const res = await req<{ health: import('./types').HealthProfile }>('POST', '/health/weight', { weight })
+    emitDataChanged('health')
+    return res
+  },
+  async updateHeight(height: number) {
+    const res = await req<{ health: import('./types').HealthProfile }>('POST', '/health/height', { height })
     emitDataChanged('health')
     return res
   },

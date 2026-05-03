@@ -5,6 +5,7 @@ export interface UserHealthData {
   imc?: number | null
   conditions?: string[]
   allergies?: string[]
+  bloodType?: string | null
   activeMedications?: number
   polypharmacy?: boolean
   weekAdherenceRate?: number
@@ -15,6 +16,16 @@ export interface UserHealthData {
     hospitalizaciones?: string
     transfusiones?: boolean | null
     vacunas?: string
+  }
+  medicalBackground?: {
+    bloodType?: string | null
+    conditions?: string[]
+    allergies?: string[]
+    surgeries?: string
+    hospitalizations?: string
+    transfusions?: boolean | null
+    vaccines?: string
+    otherBackground?: string
   }
   vaccines?: Array<{ name: string; lastDose?: string; doses?: string }>
   wellness?: {
@@ -69,6 +80,17 @@ export function buildHealthContext(data: UserHealthData): string {
 
   // Allergies
   if (data.allergies?.length) lines.push(`Alergias conocidas: ${data.allergies.join(', ')}.`)
+
+  // Blood type
+  if (data.bloodType) lines.push(`Tipo de sangre: ${data.bloodType}.`)
+
+  // Medical background
+  const mb = data.medicalBackground
+  if (mb?.surgeries) lines.push(`Cirugías previas: ${mb.surgeries}.`)
+  if (mb?.hospitalizations) lines.push(`Hospitalizaciones: ${mb.hospitalizations}.`)
+  if (mb?.transfusions != null) lines.push(`Transfusiones: ${mb.transfusions ? 'sí' : 'no'}.`)
+  if (mb?.vaccines) lines.push(`Vacunas: ${mb.vaccines}.`)
+  if (mb?.otherBackground) lines.push(`Otros antecedentes: ${mb.otherBackground}.`)
 
   // Clinical history extras
   if (data.clinicalHistory?.antecedentes) {
@@ -125,4 +147,19 @@ export function buildHealthContext(data: UserHealthData): string {
 
   if (!lines.length) return ''
   return `[Perfil de salud del paciente]\n${lines.join('\n')}`
+}
+
+export function buildShortHealthContext(data: UserHealthData): string {
+  const parts: string[] = []
+  
+  if (data.activeMedications !== undefined) {
+    parts.push(`${data.activeMedications} medicamentos`)
+  }
+  const conditions = [...(data.conditions ?? []), ...(data.medicalBackground?.conditions ?? [])]
+  if (conditions.length > 0 && conditions.length <= 3) {
+    parts.push(conditions.join(', '))
+  }
+  
+  if (parts.length === 0) return ''
+  return `Paciente: ${parts.join(', ')}.`
 }

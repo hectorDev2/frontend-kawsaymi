@@ -43,6 +43,18 @@ export interface UserProfile {
   timezone?: string
   allergies?: string[]
   conditions?: string[]
+  bloodType?: string | null
+}
+
+export interface MedicalBackground {
+  bloodType?: string | null
+  conditions?: string[]
+  allergies?: string[]
+  surgeries?: string
+  hospitalizations?: string
+  transfusions?: boolean | null
+  vaccines?: string
+  otherBackground?: string
 }
 
 export interface UpdateProfilePayload {
@@ -208,6 +220,7 @@ export interface ApiContract {
   updateMe: (payload: UpdateProfilePayload) => Promise<{ user: UserProfile }>
   updateAllergies: (allergies: string[]) => Promise<void>
   updateConditions: (conditions: string[]) => Promise<void>
+  updateMedicalBackground: (background: MedicalBackground) => Promise<void>
   deleteMe: () => Promise<{ success: boolean }>
 
   // Medications
@@ -234,6 +247,7 @@ export interface ApiContract {
   // Health
   getHealthProfile: () => Promise<{ health: HealthProfile }>
   updateWeight: (weight: number) => Promise<{ health: HealthProfile }>
+  updateHeight: (height: number) => Promise<{ health: HealthProfile }>
   getImc: () => Promise<{ imc: number | null }>
   getPolypharmacy: () => Promise<PolypharmacyInfo>
 
