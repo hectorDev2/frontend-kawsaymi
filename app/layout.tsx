@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
+import { UserDataProvider } from '@/lib/user-data-context'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
@@ -28,8 +29,10 @@ export default function RootLayout({
     <html lang="es" className="bg-background">
       <body className={`${geist.className} font-sans antialiased`}>
         <AuthProvider>
-          {children}
-          <Toaster />
+          <UserDataProvider>
+            {children}
+            <Toaster />
+          </UserDataProvider>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

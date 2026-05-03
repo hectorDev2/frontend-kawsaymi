@@ -1,320 +1,195 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { CheckCircle2, XCircle, Clock, Smile, AlertCircle, Pill, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { CheckCircle2, XCircle, Clock, Pill, ArrowLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 import { api } from '@/lib/api'
-import { onDataChanged } from '@/lib/data-events'
-import type { AdherenceStats, MedicationEvent } from '@/lib/api'
+import { useUserData } from '@/lib/user-data-context'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
-import { useHealthContext } from '@/lib/health-context'
 
-const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-
-interface DayStat {
-  label: string
-  rate: number
-  taken: number
-  missed: number
+const STATUS = {
+  TAKEN: { emoji: '✅', label: 'Ya tomé', color: 'text-secondary bg-secondary/10' },
+  PENDING: { emoji: '⏰', label: 'Por tomar', color: 'text-amber-600 bg-amber-50' },
+  MISSED: { emoji: '❌', label: 'Olvidé', color: 'text-destructive bg-destructive/10' },
 }
 
-function buildWeekStats(events: MedicationEvent[]): DayStat[] {
-  const today = new Date()
-  const days: DayStat[] = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(today.getDate() - i)
-    const dayKey = d.toDateString()
-    const dayEvents = events.filter((e) => new Date(e.dateTimeScheduled).toDateString() === dayKey)
-    const taken = dayEvents.filter((e) => e.status === 'TAKEN').length
-    const missed = dayEvents.filter((e) => e.status === 'MISSED').length
-    const total = dayEvents.length
-    days.push({
-      label: DAY_LABELS[d.getDay()],
-      rate: total > 0 ? Math.round((taken / total) * 100) : 0,
-      taken,
-      missed,
-    })
-  }
-  return days
-}
-
-function barColor(rate: number) {
-  if (rate >= 80) return 'bg-secondary'
-  if (rate >= 50) return 'bg-amber-500'
-  return 'bg-destructive'
-}
-
-function adherenceTipCacheKey(scope: 'week' | 'today', stats: { taken: number; total: number; missed: number; pending: number }) {
-  return `kw_ai_tip:v1:adherence:${scope}:${stats.taken}:${stats.total}:${stats.missed}:${stats.pending}`
-}
-
-function AdherenceTip({
-  scope,
-  stats,
-}: {
-  scope: 'week' | 'today'
-  stats: { taken: number; total: number; missed: number; pending: number; adherenceRate?: number }
-}) {
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [tip, setTip] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const healthContext = useHealthContext()
-
-  const load = async (opts?: { force?: boolean }) => {
-    const key = adherenceTipCacheKey(scope, stats)
-    if (!opts?.force) {
-      const cached = getCachedTip(key)
-      if (cached) {
-        setTip(cached)
-        setError(null)
-        return
-      }
-    }
-
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/ai-adherence-tip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scope, ...stats, userContext: healthContext }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || 'No se pudo generar el tip')
-      const text = (data?.tip ?? '').toString().trim()
-      const finalText = text || 'No pude generar un tip por ahora.'
-      setTip(finalText)
-      setCachedTip(key, finalText)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error de conexión')
-      setTip(null)
-    } finally {
-      setLoading(false)
-    }
+function CircularProgressBig({ value }: { value: number }) {
+  const r = 70
+  const circ = 2 * Math.PI * r
+  const offset = circ - (value / 100) * circ
+  
+  const getColor = (v: number) => {
+    if (v >= 80) return '#10b981' // green
+    if (v >= 50) return '#f59e0b' // amber
+    return '#ef4444' // red
   }
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next)
-        if (next && !tip && !loading && !error) load()
-      }}
-    >
-      <Tooltip>
-        <PopoverTrigger asChild>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant={scope === 'week' ? 'secondary' : 'ghost'}
-              size="icon-sm"
-              className={scope === 'week' ? 'rounded-full bg-white/15 text-white hover:bg-white/20 hover:text-white' : 'rounded-full'}
-              aria-label={scope === 'week' ? 'Ver tip de la semana' : 'Ver tip de hoy'}
-            >
-              <Sparkles className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-        </PopoverTrigger>
-        <TooltipContent sideOffset={6}>Ver tip</TooltipContent>
-      </Tooltip>
-      <PopoverContent align="end" className="w-80">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold leading-tight">Tip</p>
-            <p className="text-xs text-muted-foreground">{scope === 'week' ? 'Esta semana' : 'Hoy'}</p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2"
-            disabled={loading}
-            onClick={() => load({ force: true })}
-          >
-            {loading ? 'Generando...' : 'Otro'}
-          </Button>
-        </div>
-        <div className="mt-3 text-sm">
-          {loading ? (
-            <p className="text-muted-foreground">Generando tip...</p>
-          ) : error ? (
-            <p className="text-destructive">{error}</p>
-          ) : (
-            <p className="leading-relaxed">{tip}</p>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <div className="relative w-44 h-44 flex-shrink-0">
+      <svg width="176" height="176" viewBox="0 0 176 176" className="-rotate-90">
+        <circle cx="88" cy="88" r={r} fill="none" stroke="#e5e7eb" strokeWidth="16" />
+        <circle 
+          cx="88" cy="88" r={r} 
+          fill="none" 
+          stroke={getColor(value)} 
+          strokeWidth="16" 
+          strokeLinecap="round"
+          strokeDasharray={circ} 
+          strokeDashoffset={offset} 
+          className="transition-all duration-700"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-4xl font-bold" style={{ color: getColor(value) }}>{value}%</span>
+        <span className="text-sm text-muted-foreground">completado</span>
+      </div>
+    </div>
   )
 }
 
 export default function AdherencePage() {
-  const [week, setWeek] = useState<AdherenceStats | null>(null)
-  const [today, setToday] = useState<AdherenceStats | null>(null)
-  const [days, setDays] = useState<DayStat[]>([])
-  const [loading, setLoading] = useState(true)
+  const { todayAdherence: today, todayEvents: events, isLoading, refreshEvents } = useUserData()
+  const [, setRefreshing] = useState(false)
 
-  const load = async () => {
-    const [w, t, evtRes] = await Promise.all([
-      api.getWeekAdherence(),
-      api.getTodayAdherence(),
-      api.getWeekEvents(),
-    ])
-    setWeek(w)
-    setToday(t)
-    setDays(buildWeekStats(evtRes.events ?? []))
+  const handleMark = async (id: string, action: 'taken' | 'missed') => {
+    setRefreshing(true)
+    const fn = action === 'taken' ? api.markEventTaken : api.markEventMissed
+    await fn(id)
+    await refreshEvents()
+    setRefreshing(false)
   }
 
-  useEffect(() => {
-    load().finally(() => setLoading(false))
-    const off = onDataChanged((type) => {
-      if (type === 'events' || type === 'adherence') {
-        load().catch(() => {})
-      }
-    })
-    return off
-  }, [])
+  const takenCount = events.filter(e => e.status === 'TAKEN').length
+  const pendingCount = events.filter(e => e.status === 'PENDING').length
+  const missedCount = events.filter(e => e.status === 'MISSED').length
+  const progress = today ? Math.round(today.adherenceRate * 100) : 0
+  const sortedEvents = [...events].sort(
+    (a, b) => new Date(a.dateTimeScheduled).getTime() - new Date(b.dateTimeScheduled).getTime()
+  )
 
-  const weekRate = week ? Math.round(week.adherenceRate * 100) : 0
+  const getEmoji = (rate: number) => {
+    if (rate >= 80) return '😊'
+    if (rate >= 50) return '😐'
+    return '😢'
+  }
+
+  const getMessage = (rate: number) => {
+    if (rate >= 80) return '¡Muy bien! Seguí así'
+    if (rate >= 50) return 'Casi lo lográs, un poco más'
+    return 'Tomá tus pastillas a horario'
+  }
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold">Mis pastillas</h1>
-        <p className="text-muted-foreground text-sm mt-1">¿Cuántas tomé esta semana?</p>
-      </div>
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-md mx-auto">
+      <Button variant="ghost" className="gap-2 mb-4 -ml-2" asChild>
+        <Link href="/dashboard">
+          <ArrowLeft className="h-5 w-5" />
+          Volver
+        </Link>
+      </Button>
 
-      {/* Resumen principal */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="card-elevated gradient-brand p-5 text-white">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-white/80 text-sm font-medium mb-2">Esta semana tomé</p>
-            {!loading && week && (
-              <AdherenceTip
-                scope="week"
-                stats={{ taken: week.taken, total: week.total, missed: week.missed, pending: week.pending, adherenceRate: week.adherenceRate }}
-              />
-            )}
-          </div>
-          {loading ? (
-            <div className="h-10 w-28 bg-white/20 rounded animate-pulse" />
-          ) : (
-            <>
-              <p className="text-2xl font-bold leading-tight">
-                {week?.taken ?? 0} de {week?.total ?? 0}
-              </p>
-              <p className="text-white/80 text-xs font-medium mt-1">pastillas</p>
-            </>
-          )}
-        </div>
-        <div className="card-elevated p-5">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-muted-foreground text-sm font-medium mb-2">Hoy tomé</p>
-            {!loading && today && (
-              <AdherenceTip
-                scope="today"
-                stats={{ taken: today.taken, total: today.total, missed: today.missed, pending: today.pending, adherenceRate: today.adherenceRate }}
-              />
-            )}
-          </div>
-          {loading ? (
-            <div className="h-10 w-20 bg-muted rounded animate-pulse" />
-          ) : (
-            <>
-              <p className="text-2xl font-bold text-primary leading-tight">
-                {today?.taken ?? 0} de {today?.total ?? 0}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">pastillas</p>
-            </>
-          )}
-        </div>
-      </div>
+      <h1 className="text-2xl md:text-3xl font-bold mb-2">Mis Pastillas</h1>
+      <p className="text-muted-foreground mb-6">Hoy tomaste {takenCount} de {sortedEvents.length}</p>
 
-      {/* Gráfico de la semana */}
-      <div className="card-elevated p-5 mb-6">
-        <h2 className="font-bold text-base mb-1 flex items-center gap-2">
-          <Pill className="w-5 h-5 text-primary" />
-          Cómo me fue cada día
-        </h2>
-        <p className="text-xs text-muted-foreground mb-4">Verde = bien · Amarillo = más o menos · Rojo = olvidé</p>
-        {loading ? (
-          <div className="h-24 bg-muted rounded animate-pulse" />
-        ) : (
-          <div className="flex items-end gap-2 h-28">
-            {days.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                  <div
-                    className={`w-full rounded-t-lg transition-all ${barColor(d.rate)}`}
-                    style={{ height: `${Math.max(d.rate, 4)}%` }}
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground font-medium">{d.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Contadores simples */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="card-elevated p-4 text-center">
-          <CheckCircle2 className="w-6 h-6 text-secondary mx-auto mb-1" />
-          <p className="text-2xl font-bold text-secondary">{loading ? '–' : week?.taken ?? 0}</p>
-          <p className="text-xs text-muted-foreground font-medium">Tomé</p>
-        </div>
-        <div className="card-elevated p-4 text-center">
-          <XCircle className="w-6 h-6 text-destructive mx-auto mb-1" />
-          <p className="text-2xl font-bold text-destructive">{loading ? '–' : week?.missed ?? 0}</p>
-          <p className="text-xs text-muted-foreground font-medium">Olvidé</p>
-        </div>
-        <div className="card-elevated p-4 text-center">
-          <Clock className="w-6 h-6 text-amber-500 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-amber-600">{loading ? '–' : week?.pending ?? 0}</p>
-          <p className="text-xs text-muted-foreground font-medium">Me faltan</p>
-        </div>
+      {/* Círculo grande */}
+      <div className="flex justify-center mb-8">
+        <CircularProgressBig value={progress} />
       </div>
 
       {/* Mensaje motivacional */}
-      <div className="card-elevated p-5 space-y-4">
-        <h2 className="font-bold text-base">¿Cómo voy?</h2>
-        {loading ? (
-          <div className="h-16 bg-muted rounded-xl animate-pulse" />
-        ) : weekRate >= 80 ? (
-          <div className="p-4 rounded-xl bg-secondary/10 border border-secondary/20 flex items-start gap-3">
-            <Smile className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-secondary">¡Muy bien! Seguí así</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Esta semana tomé {week?.taken} de {week?.total} pastillas. ¡Excelente trabajo!
-              </p>
-            </div>
+      <div className="card-elevated p-4 mb-6 text-center">
+        <p className="text-3xl mb-2">{getEmoji(progress)}</p>
+        <p className="text-lg font-semibold">{getMessage(progress)}</p>
+      </div>
+
+      {/* Lista de medicamentos */}
+      <div className="space-y-3 mb-6">
+        <h2 className="font-bold text-lg">¿Qué tomaste hoy?</h2>
+        
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1,2,3].map(i => (
+              <div key={i} className="card-elevated p-4 h-20 animate-pulse bg-muted rounded-xl" />
+            ))}
+          </div>
+        ) : events.length === 0 ? (
+          <div className="card-elevated p-6 text-center">
+            <Pill className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
+            <p className="font-medium">No tenés medicamentos para hoy</p>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-amber-900">Puedo mejorar</p>
-              <p className="text-sm text-amber-800 mt-1">
-                Esta semana tomé {week?.taken} de {week?.total} pastillas. Intentá tomarlas siempre a la misma hora del día.
-              </p>
-            </div>
-          </div>
+          sortedEvents.map((evt) => {
+            const cfg = STATUS[evt.status]
+            const time = new Date(evt.dateTimeScheduled).toLocaleTimeString('es', {
+              hour: '2-digit', minute: '2-digit', hour12: false,
+            })
+            
+            return (
+              <div key={evt.id} className="card-elevated p-4 flex items-center gap-4">
+                <div className="text-2xl">{cfg.emoji}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-base truncate">{evt.medicationName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {evt.medicationDose} • {time}
+                  </p>
+                </div>
+                {evt.status === 'PENDING' && (
+                  <Button 
+                    size="sm" 
+                    className="h-10 px-4 font-bold"
+                    onClick={() => handleMark(evt.id, 'taken')}
+                  >
+                    Tomar
+                  </Button>
+                )}
+                {evt.status === 'MISSED' && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="h-10 px-4"
+                    onClick={() => handleMark(evt.id, 'taken')}
+                  >
+                    Ya la tomé
+                  </Button>
+                )}
+                {evt.status === 'TAKEN' && (
+                  <span className="text-xs font-medium text-secondary bg-secondary/10 px-3 py-1 rounded-full">
+                    ✓ Listo
+                  </span>
+                )}
+              </div>
+            )
+          })
         )}
-        <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 flex items-start gap-3">
-          <Clock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-primary">Recordatorio de horarios</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Si activás los recordatorios, la app te avisa cuando es hora de tomar cada pastilla.
-            </p>
-          </div>
+      </div>
+
+      {/* Resumen simple */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card-elevated p-4 text-center">
+          <p className="text-3xl mb-1">✅</p>
+          <p className="text-xl font-bold text-secondary">{takenCount}</p>
+          <p className="text-xs text-muted-foreground">Tomé</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <p className="text-3xl mb-1">⏰</p>
+          <p className="text-xl font-bold text-amber-600">{pendingCount}</p>
+          <p className="text-xs text-muted-foreground">Faltan</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <p className="text-3xl mb-1">❌</p>
+          <p className="text-xl font-bold text-destructive">{missedCount}</p>
+          <p className="text-xs text-muted-foreground">Olvidé</p>
         </div>
       </div>
+
+      {/* Ver todos los medicamentos */}
+      <Link 
+        href="/medications" 
+        className="flex items-center justify-between p-4 mt-6 card-elevated hover:shadow-md transition-all"
+      >
+        <span className="font-medium">Ver todos mis medicamentos</span>
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </Link>
     </div>
   )
 }
