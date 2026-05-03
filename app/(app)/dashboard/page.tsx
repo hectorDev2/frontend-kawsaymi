@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
+import { useUserData } from '@/lib/user-data-context'
 import { api } from '@/lib/api'
 import type { Medication, MedicationEvent, AdherenceStats } from '@/lib/api'
 import Link from 'next/link'
-import { CheckCircle2, Clock, Circle, ChevronRight, Users, AlertCircle, Activity, Heart, Pill, Sparkles } from 'lucide-react'
+import { CheckCircle2, Clock, Circle, ChevronRight, Users, AlertCircle, Activity, Heart, Pill, Sparkles, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -274,44 +275,13 @@ function EventDoseTip({
 
 function PatientDashboard({ user }: { user: any }) {
   const { toast } = useToast()
-  const [events, setEvents] = useState<MedicationEvent[]>([])
-  const [medications, setMedications] = useState<Medication[]>([])
-  const [adherence, setAdherence] = useState<AdherenceStats | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { todayEvents: events, todayAdherence: adherence, medications, isLoading, refreshEvents } = useUserData()
   const [demoTaken, setDemoTaken] = useState(false)
-
-  const load = async () => {
-    const [evtRes, adh, medRes] = await Promise.all([
-      api.getTodayEvents(),
-      api.getTodayAdherence(),
-      api.getMedications(),
-    ])
-    setEvents(
-      (evtRes.events ?? []).sort(
-        (a, b) => new Date(a.dateTimeScheduled).getTime() - new Date(b.dateTimeScheduled).getTime()
-      )
-    )
-    setAdherence(adh)
-    setMedications((medRes.medications ?? []).filter((m) => m.status === 'ACTIVE'))
-  }
-
-  useEffect(() => {
-    load().finally(() => setLoading(false))
-
-    const off = onDataChanged((type) => {
-      if (type === 'medications' || type === 'events' || type === 'adherence') {
-        load().catch(() => {})
-      }
-    })
-    return off
-  }, [])
 
   const handleMark = async (id: string, action: 'taken' | 'missed') => {
     const fn = action === 'taken' ? api.markEventTaken : api.markEventMissed
     const { event } = await fn(id)
-    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, status: event.status } : e)))
-    const adh = await api.getTodayAdherence()
-    setAdherence(adh)
+    await refreshEvents()
   }
 
   const isDemoMode = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
@@ -325,7 +295,7 @@ function PatientDashboard({ user }: { user: any }) {
     activeMedications: 1,
   }
 
-  const effectiveAdherence = isDemoMode && !loading && events.length === 0 ? demoAdh : adherence
+  const effectiveAdherence = isDemoMode && !isLoading && events.length === 0 ? demoAdh : adherence
 
   const progress = effectiveAdherence ? Math.round(effectiveAdherence.adherenceRate * 100) : 0
   const taken = effectiveAdherence?.taken ?? 0
@@ -345,11 +315,11 @@ function PatientDashboard({ user }: { user: any }) {
               <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <p className="text-white/80 text-sm font-medium mb-1">Progreso del día</p>
-                {isDemoMode && !loading && events.length === 0 && (
+                {isDemoMode && !isLoading && events.length === 0 && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/15 text-white/90">DEMO</span>
                 )}
               </div>
-              {!loading && effectiveAdherence && (
+              {!isLoading && effectiveAdherence && (
                 <DashboardAdherenceTip
                   stats={{
                     taken: effectiveAdherence.taken,
@@ -361,7 +331,7 @@ function PatientDashboard({ user }: { user: any }) {
                 />
               )}
               </div>
-            {loading ? (
+            {isLoading ? (
               <div className="h-6 w-48 bg-white/20 rounded animate-pulse" />
             ) : (
               <>
@@ -391,7 +361,7 @@ function PatientDashboard({ user }: { user: any }) {
           </Link>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="card-elevated p-4 h-20 animate-pulse bg-muted" />
@@ -517,6 +487,7 @@ function PatientDashboard({ user }: { user: any }) {
         {[
           { label: 'Mi adherencia', href: '/adherence', icon: Activity, color: 'bg-primary/10 text-primary' },
           { label: 'Datos de salud', href: '/health-data', icon: Heart, color: 'bg-secondary/10 text-secondary' },
+          { label: 'Antecedentes médicos', href: '/medical-background', icon: FileText, color: 'bg-amber-100 text-amber-700' },
         ].map((item) => (
           <Link key={item.href} href={item.href}
             className="card-elevated p-4 flex items-center gap-3 hover:shadow-md transition-all active:scale-[0.98]"

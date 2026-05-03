@@ -35,9 +35,8 @@ export async function POST(req: NextRequest) {
 
   const contextPrefix = userContext ? `${userContext}\n\n` : ''
   const userMessage =
-    `${contextPrefix}Dame un tip breve y útil para mejorar la adherencia de medicación ${label}. ` +
-    `Datos: tomé ${taken} de ${total}, me faltan ${pending}, olvidé ${missed}.` +
-    rateTxt
+    `${contextPrefix}Tip muy breve para mejorar adherencia ${label}. ` +
+    `Datos: ${taken}/${total} tomadas, ${pending} pendientes, ${missed} olvidadas.`
 
   try {
     const res = await fetch(GROQ_URL, {
@@ -51,16 +50,19 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-              content:
-              'Eres un acompañante de salud que ayuda a adultos mayores a tomar sus medicamentos a tiempo. ' +
-              'Responde SOLO con 1-2 oraciones cortas en español neutro, sin tecnicismos ni markdown. ' +
-              'No des indicaciones médicas específicas ni cambies tratamientos; enfócate en hábitos y recordatorios simples. ' +
+            content:
+              'Eres un asistente de salud para adultos mayores. ' +
+              'Responde en MAXIMO 2 FRASES CORTAS en español simple. ' +
+              'Cada frase maximo 8 palabras. ' +
+              'Sé práctico y concreto. ' +
+              'NUNCA des indicaciones médicas. ' +
+              'Ejemplo de tono: "Ponete alarmita a las 8hs" o "Tomá las pastillas con el desayuno"' +
               buildTrustedHealthSourcesInstruction(),
           },
           { role: 'user', content: userMessage },
         ],
-        max_tokens: 120,
-        temperature: 0.5,
+        max_tokens: 60,
+        temperature: 0.3,
       }),
     })
 
