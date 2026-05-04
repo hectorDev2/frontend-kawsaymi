@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildTrustedHealthSourcesInstruction } from '@/lib/trusted-health-sources'
+import { searchKnowledge, extractContextFromMatches } from '@/lib/ai-knowledge'
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
@@ -28,12 +29,23 @@ export async function POST(req: NextRequest) {
     conditions.length && `Condiciones del paciente: ${conditions.join(', ')}`,
   ].filter(Boolean).join('. ')
 
-  const contextPrefix = userContext ? `${userContext}\n\n` : ''
-  const userMessage =
-    intent === 'card-tip'
-      ? `${contextPrefix}Dame una sugerencia breve y útil para tomar "${medicationName}"${contextParts ? `. ${contextParts}` : ''}. ` +
-        'Formato estricto: 1) Cómo tomarlo: ... 2) Con qué tomarlo: ... 3) Precaución: ...'
-      : `${contextPrefix}Dame instrucciones simples para tomar "${medicationName}"${contextParts ? `. ${contextParts}` : ''}.`
+  const knowledgeResult = await searchKnowledge(`medicamento ${medicationName} instrucciones uso efectos secundarios`, 3)
+  const docsContext = extractContextFromMatches(knowledgeResult.matches)
+
+  let userMessage = ''
+  if (docsContext) {
+    userMessage = `[Información del medicamento]\n${docsContext}\n\n`
+  }
+  if (userContext) {
+    userMessage += `[Datos del paciente]\n${userContext}\n\n`
+  }
+  
+  if (intent === 'card-tip') {
+    userMessage += `Dame una sugerencia breve y útil para tomar "${medicationName}"${contextParts ? `. ${contextParts}` : ''}. ` +
+      'Formato estricto: 1) Cómo tomarlo: ... 2) Con qué tomarlo: ... 3) Precaución: ...'
+  } else {
+    userMessage += `Dame instrucciones simples para tomar "${medicationName}"${contextParts ? `. ${contextParts}` : ''}.`
+  }
 
   try {
     const res = await fetch(GROQ_URL, {
@@ -45,14 +57,13 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: MODEL,
         messages: [
-          {
+{
             role: 'system',
-              content:
-              'Eres un farmacéutico clínico que explica medicamentos a adultos mayores. ' +
-              'Responde SOLO con 1-2 oraciones cortas en español neutro, sin tecnicismos ni markdown. ' +
-              'Explicá cómo tomar el medicamento y una precaución básica, sin cambiar dosis ni tratamiento. ' +
-              'Si el dato no es seguro o depende del caso clínico, aclaralo con prudencia. ' +
-              'Ejemplo: "Tómalo con el desayuno para evitar molestias. Si olvidas una dosis, tómala en cuanto lo recuerdes." ' +
+            content:
+              'Eres un farmacéutico para adultos mayores. ' +
+              'Responde en MAXIMO 2 FRASES MUY CORTAS (máximo 6 palabras cada una). ' +
+              'Sé concreto. NUNCA des indicaciones médicas ni cambies dosis. ' +
+              'Ejemplos: "Tomalo con comida" o "No tomes alcohol"' +
               buildTrustedHealthSourcesInstruction(),
           },
           { role: 'user', content: userMessage },
