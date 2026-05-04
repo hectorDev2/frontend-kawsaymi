@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildTrustedHealthSourcesInstruction } from '@/lib/trusted-health-sources'
+import { searchKnowledge, extractContextFromMatches } from '@/lib/ai-knowledge'
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
@@ -33,9 +34,17 @@ export async function POST(req: NextRequest) {
       ? 'Estado: esta dosis ya fue tomada.'
       : 'Estado: esta dosis sigue pendiente.'
 
-  const contextPrefix = userContext ? `${userContext}\n\n` : ''
-  const userMessage =
-    `${contextPrefix}Dame un tip breve y útil para la ${contextLabel}, sin cambiar el tratamiento. ` +
+  const knowledgeResult = await searchKnowledge(`medicamento ${medicationName} indicaciones efectos`, 3)
+  const docsContext = extractContextFromMatches(knowledgeResult.matches)
+
+  let userMessage = ''
+  if (docsContext) {
+    userMessage = `[Información del medicamento]\n${docsContext}\n\n`
+  }
+  if (userContext) {
+    userMessage += `[Datos del paciente]\n${userContext}\n\n`
+  }
+  userMessage += `Dame un tip breve y útil para la ${contextLabel}, sin cambiar el tratamiento. ` +
     `Medicamento: "${medicationName}". ${dosePart} ${timePart} ${instructionsPart} ${statusPart}`.trim()
 
   try {
@@ -50,11 +59,11 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-              content:
-              'Eres un acompañante de salud que ayuda a adultos mayores a resolver la toma actual de sus medicamentos. ' +
-              'Responde SOLO con 1-2 oraciones cortas en español neutro, sin tecnicismos ni markdown. ' +
-              'No des indicaciones médicas específicas ni cambies dosis; enfócate en la toma actual, hábitos y recordatorios simples. ' +
-              'La respuesta debe servir para la dosis de hoy y mencionar, si ayuda, la hora o la rutina inmediata. ' +
+            content:
+              'Eres un acompañante de salud para adultos mayores. ' +
+              'Responde en MAXIMO 2 FRASES MUY CORTAS (máximo 6 palabras cada una). ' +
+              'Sé práctico y concreto. NUNCA des indicaciones médicas ni cambies dosis. ' +
+              'Ejemplos: "Tomalo con el desayuno" o "No lo tomes con leche"' +
               buildTrustedHealthSourcesInstruction(),
           },
           { role: 'user', content: userMessage },

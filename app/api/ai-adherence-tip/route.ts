@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildTrustedHealthSourcesInstruction } from '@/lib/trusted-health-sources'
+import { searchKnowledge, extractContextFromMatches } from '@/lib/ai-knowledge'
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
@@ -29,13 +30,18 @@ export async function POST(req: NextRequest) {
   }
 
   const label = scope === 'week' ? 'esta semana' : 'hoy'
-  const rateTxt = Number.isFinite(adherenceRate)
-    ? ` Tasa de adherencia: ${Math.round((adherenceRate as number) * 100)}%.`
-    : ''
 
-  const contextPrefix = userContext ? `${userContext}\n\n` : ''
-  const userMessage =
-    `${contextPrefix}Tip muy breve para mejorar adherencia ${label}. ` +
+  const knowledgeResult = await searchKnowledge('adherencia medicamentos adultos mayores adultos mayores', 3)
+  const docsContext = extractContextFromMatches(knowledgeResult.matches)
+
+  let userMessage = ''
+  if (docsContext) {
+    userMessage = `[Información de documentos médicos]\n${docsContext}\n\n`
+  }
+  if (userContext) {
+    userMessage += `[Datos del paciente]\n${userContext}\n\n`
+  }
+  userMessage += `Tip muy breve para mejorar adherencia ${label}. ` +
     `Datos: ${taken}/${total} tomadas, ${pending} pendientes, ${missed} olvidadas.`
 
   try {
@@ -51,17 +57,15 @@ export async function POST(req: NextRequest) {
           {
             role: 'system',
             content:
-              'Eres un asistente de salud para adultos mayores. ' +
-              'Responde en MAXIMO 2 FRASES CORTAS en español simple. ' +
-              'Cada frase maximo 8 palabras. ' +
-              'Sé práctico y concreto. ' +
-              'NUNCA des indicaciones médicas. ' +
-              'Ejemplo de tono: "Ponete alarmita a las 8hs" o "Tomá las pastillas con el desayuno"' +
+              'Eres un acompañante de salud para adultos mayores. ' +
+              'Responde en 2-3 oraciones cortas y prácticas en español simple. ' +
+              'Sé práctico y útil. NUNCA des indicaciones médicas. ' +
+              'Ejemplo: "Para no olvidar tus medicamentos, poné una alarma a la misma hora todos los días. Así se vuelve un hábito."' +
               buildTrustedHealthSourcesInstruction(),
           },
           { role: 'user', content: userMessage },
         ],
-        max_tokens: 60,
+        max_tokens: 80,
         temperature: 0.3,
       }),
     })
