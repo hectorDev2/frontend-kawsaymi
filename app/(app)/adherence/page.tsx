@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { CheckCircle2, XCircle, Clock, Pill, ArrowLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
-import { api } from '@/lib/api'
-import { useUserData } from '@/lib/user-data-context'
+import { useAdherenceStore } from '@/lib/stores/adherence-store'
 import { Button } from '@/components/ui/button'
 
 const STATUS = {
@@ -17,25 +16,25 @@ function CircularProgressBig({ value }: { value: number }) {
   const r = 70
   const circ = 2 * Math.PI * r
   const offset = circ - (value / 100) * circ
-  
+
   const getColor = (v: number) => {
-    if (v >= 80) return '#10b981' // green
-    if (v >= 50) return '#f59e0b' // amber
-    return '#ef4444' // red
+    if (v >= 80) return '#10b981'
+    if (v >= 50) return '#f59e0b'
+    return '#ef4444'
   }
 
   return (
     <div className="relative w-44 h-44 flex-shrink-0">
       <svg width="176" height="176" viewBox="0 0 176 176" className="-rotate-90">
         <circle cx="88" cy="88" r={r} fill="none" stroke="#e5e7eb" strokeWidth="16" />
-        <circle 
-          cx="88" cy="88" r={r} 
-          fill="none" 
-          stroke={getColor(value)} 
-          strokeWidth="16" 
+        <circle
+          cx="88" cy="88" r={r}
+          fill="none"
+          stroke={getColor(value)}
+          strokeWidth="16"
           strokeLinecap="round"
-          strokeDasharray={circ} 
-          strokeDashoffset={offset} 
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
           className="transition-all duration-700"
         />
       </svg>
@@ -48,23 +47,29 @@ function CircularProgressBig({ value }: { value: number }) {
 }
 
 export default function AdherencePage() {
-  const { todayAdherence: today, todayEvents: events, isLoading, refreshEvents } = useUserData()
-  const [, setRefreshing] = useState(false)
+  const todayEvents = useAdherenceStore((s) => s.todayEvents)
+  const todayAdherence = useAdherenceStore((s) => s.todayAdherence)
+  const isLoading = useAdherenceStore((s) => s.isLoading)
+  const loadToday = useAdherenceStore((s) => s.loadToday)
+  const markTaken = useAdherenceStore((s) => s.markTaken)
+  const markMissed = useAdherenceStore((s) => s.markMissed)
+  const subscribeToEvents = useAdherenceStore((s) => s.subscribeToEvents)
 
-  const handleMark = async (id: string, action: 'taken' | 'missed') => {
-    setRefreshing(true)
-    const fn = action === 'taken' ? api.markEventTaken : api.markEventMissed
-    await fn(id)
-    await refreshEvents()
-    setRefreshing(false)
-  }
+  useEffect(() => {
+    loadToday()
+  }, [loadToday])
 
-  const takenCount = events.filter(e => e.status === 'TAKEN').length
-  const pendingCount = events.filter(e => e.status === 'PENDING').length
-  const missedCount = events.filter(e => e.status === 'MISSED').length
-  const progress = today ? Math.round(today.adherenceRate * 100) : 0
-  const sortedEvents = [...events].sort(
-    (a, b) => new Date(a.dateTimeScheduled).getTime() - new Date(b.dateTimeScheduled).getTime()
+  useEffect(() => {
+    const unsub = subscribeToEvents()
+    return unsub
+  }, [subscribeToEvents])
+
+  const takenCount = todayEvents.filter((e) => e.status === 'TAKEN').length
+  const pendingCount = todayEvents.filter((e) => e.status === 'PENDING').length
+  const missedCount = todayEvents.filter((e) => e.status === 'MISSED').length
+  const progress = todayAdherence ? Math.round(todayAdherence.adherenceRate * 100) : 0
+  const sortedEvents = [...todayEvents].sort(
+    (a, b) => new Date(a.dateTimeScheduled).getTime() - new Date(b.dateTimeScheduled).getTime(),
   )
 
   const getEmoji = (rate: number) => {
@@ -91,28 +96,25 @@ export default function AdherencePage() {
       <h1 className="text-2xl md:text-3xl font-bold mb-2">Mis Pastillas</h1>
       <p className="text-muted-foreground mb-6">Hoy tomaste {takenCount} de {sortedEvents.length}</p>
 
-      {/* Círculo grande */}
       <div className="flex justify-center mb-8">
         <CircularProgressBig value={progress} />
       </div>
 
-      {/* Mensaje motivacional */}
       <div className="card-elevated p-4 mb-6 text-center">
         <p className="text-3xl mb-2">{getEmoji(progress)}</p>
         <p className="text-lg font-semibold">{getMessage(progress)}</p>
       </div>
 
-      {/* Lista de medicamentos */}
       <div className="space-y-3 mb-6">
         <h2 className="font-bold text-lg">¿Qué tomaste hoy?</h2>
-        
+
         {isLoading ? (
           <div className="space-y-3">
-            {[1,2,3].map(i => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="card-elevated p-4 h-20 animate-pulse bg-muted rounded-xl" />
             ))}
           </div>
-        ) : events.length === 0 ? (
+        ) : todayEvents.length === 0 ? (
           <div className="card-elevated p-6 text-center">
             <Pill className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
             <p className="font-medium">No tenés medicamentos para hoy</p>
@@ -123,7 +125,7 @@ export default function AdherencePage() {
             const time = new Date(evt.dateTimeScheduled).toLocaleTimeString('es', {
               hour: '2-digit', minute: '2-digit', hour12: false,
             })
-            
+
             return (
               <div key={evt.id} className="card-elevated p-4 flex items-center gap-4">
                 <div className="text-2xl">{cfg.emoji}</div>
@@ -134,20 +136,20 @@ export default function AdherencePage() {
                   </p>
                 </div>
                 {evt.status === 'PENDING' && (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="h-10 px-4 font-bold"
-                    onClick={() => handleMark(evt.id, 'taken')}
+                    onClick={() => markTaken(evt.id)}
                   >
                     Tomar
                   </Button>
                 )}
                 {evt.status === 'MISSED' && (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     className="h-10 px-4"
-                    onClick={() => handleMark(evt.id, 'taken')}
+                    onClick={() => markTaken(evt.id)}
                   >
                     Ya la tomé
                   </Button>
@@ -163,7 +165,6 @@ export default function AdherencePage() {
         )}
       </div>
 
-      {/* Resumen simple */}
       <div className="grid grid-cols-3 gap-3">
         <div className="card-elevated p-4 text-center">
           <p className="text-3xl mb-1">✅</p>
@@ -182,9 +183,8 @@ export default function AdherencePage() {
         </div>
       </div>
 
-      {/* Ver todos los medicamentos */}
-      <Link 
-        href="/medications" 
+      <Link
+        href="/medications"
         className="flex items-center justify-between p-4 mt-6 card-elevated hover:shadow-md transition-all"
       >
         <span className="font-medium">Ver todos mis medicamentos</span>

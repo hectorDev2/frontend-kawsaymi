@@ -8,13 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/lib/auth-context'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { Eye, EyeOff } from 'lucide-react'
 
 export default function SignupPage() {
   const router = useRouter()
   const { signup } = useAuth()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [role, setRole] = useState<'PATIENT' | 'CAREGIVER'>('PATIENT')
@@ -24,11 +23,11 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (form.password !== form.confirmPassword) {
-      toast({ title: 'Error', description: 'Las contraseñas no coinciden', variant: 'destructive' })
+      toast.error('Error', { description: 'Las contraseñas no coinciden' })
       return
     }
     if (form.password.length < 6) {
-      toast({ title: 'Error', description: 'La contraseña debe tener al menos 6 caracteres', variant: 'destructive' })
+      toast.error('Error', { description: 'La contraseña debe tener al menos 6 caracteres' })
       return
     }
     setIsLoading(true)
@@ -36,7 +35,7 @@ export default function SignupPage() {
       await signup({ name: form.name, email: form.email, password: form.password, role })
       router.push('/auth/consent')
     } catch (err) {
-      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Intentá de nuevo', variant: 'destructive' })
+      toast.error('Error', { description: err instanceof Error ? err.message : 'Intentá de nuevo' })
     } finally {
       setIsLoading(false)
     }

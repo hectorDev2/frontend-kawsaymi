@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import type { HealthProfile, PolypharmacyInfo } from '@/lib/api'
 import { useHealthContext } from '@/lib/health-context'
@@ -137,7 +137,7 @@ function FieldTipButton({ field, data }: { field: string; data: WellnessFormStat
 }
 
 export default function HealthDataPage() {
-  const { toast } = useToast()
+
   const [health, setHealth] = useState<HealthProfile | null>(null)
   const [poly, setPoly] = useState<PolypharmacyInfo | null>(null)
   const [loading, setLoading] = useState(true)
@@ -205,12 +205,12 @@ export default function HealthDataPage() {
     const nextHeight = Number.parseFloat(height)
 
     if (Number.isNaN(nextWeight) || nextWeight <= 0) {
-      toast({ title: 'Error', description: 'Ingresá un peso válido', variant: 'destructive' })
+      toast.error('Error', { description: 'Ingresá un peso válido' })
       return
     }
 
     if (height && (Number.isNaN(nextHeight) || nextHeight <= 0)) {
-      toast({ title: 'Error', description: 'Ingresá una altura válida', variant: 'destructive' })
+      toast.error('Error', { description: 'Ingresá una altura válida' })
       return
     }
 
@@ -223,9 +223,9 @@ export default function HealthDataPage() {
         window.localStorage.setItem(HEIGHT_STORAGE_KEY, height)
       }
 
-      toast({ title: '¡Guardado!', description: 'Medidas actualizadas correctamente' })
+      toast('¡Guardado!', { description: 'Medidas actualizadas correctamente' })
     } catch {
-      toast({ title: 'Error', description: 'No se pudo guardar las medidas', variant: 'destructive' })
+      toast.error('Error', { description: 'No se pudo guardar las medidas' })
     } finally {
       setSaving(false)
     }
@@ -262,11 +262,11 @@ export default function HealthDataPage() {
     link.download = 'plan-mejora-kawsaymi.txt'
     link.click()
     URL.revokeObjectURL(url)
-    toast({ title: 'Plan exportado', description: 'Se descargó tu plan de mejora en formato texto.' })
+    toast('Plan exportado', { description: 'Se descargó tu plan de mejora en formato texto.' })
   }
 
   const handleRefreshPlan = () => {
-    toast({ title: 'Plan actualizado', description: 'Reevaluamos tus datos actuales para mantener el plan al día.' })
+    toast('Plan actualizado', { description: 'Reevaluamos tus datos actuales para mantener el plan al día.' })
   }
 
   return (

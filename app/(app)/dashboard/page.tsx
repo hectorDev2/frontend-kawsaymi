@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { useUserData } from '@/lib/user-data-context'
-import { api } from '@/lib/api'
+import { useAdherenceStore } from '@/lib/stores/adherence-store'
 import type { Medication, MedicationEvent, AdherenceStats } from '@/lib/api'
 import Link from 'next/link'
 import { CheckCircle2, Clock, Circle, ChevronRight, Users, AlertCircle, Activity, Heart, Pill, Sparkles, FileText } from 'lucide-react'
@@ -11,8 +11,6 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
-import { useToast } from '@/hooks/use-toast'
-import { onDataChanged } from '@/lib/data-events'
 import { useHealthContext } from '@/lib/health-context'
 
 // ─── Circular Progress ───────────────────────────────────────────────────────
@@ -274,14 +272,22 @@ function EventDoseTip({
 // ─── Patient Dashboard ───────────────────────────────────────────────────────
 
 function PatientDashboard({ user }: { user: any }) {
-  const { toast } = useToast()
-  const { todayEvents: events, todayAdherence: adherence, medications, isLoading, refreshEvents } = useUserData()
+  const events = useAdherenceStore((s) => s.todayEvents)
+  const adherence = useAdherenceStore((s) => s.todayAdherence)
+  const adhLoading = useAdherenceStore((s) => s.isLoading)
+  const markTaken = useAdherenceStore((s) => s.markTaken)
+  const markMissed = useAdherenceStore((s) => s.markMissed)
+  const loadToday = useAdherenceStore((s) => s.loadToday)
+  const subscribeToEvents = useAdherenceStore((s) => s.subscribeToEvents)
+  const { medications, isLoading } = useUserData()
   const [demoTaken, setDemoTaken] = useState(false)
 
+  useEffect(() => { loadToday() }, [loadToday])
+  useEffect(() => { const unsub = subscribeToEvents(); return unsub }, [subscribeToEvents])
+
   const handleMark = async (id: string, action: 'taken' | 'missed') => {
-    const fn = action === 'taken' ? api.markEventTaken : api.markEventMissed
-    const { event } = await fn(id)
-    await refreshEvents()
+    if (action === 'taken') await markTaken(id)
+    else await markMissed(id)
   }
 
   const isDemoMode = process.env.NEXT_PUBLIC_USE_MOCK === 'true'

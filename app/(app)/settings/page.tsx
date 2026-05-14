@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { api } from '@/lib/api'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { User, Bell, Lock, LogOut, Save, Heart, MapPin, Calendar, Loader2 } from 'lucide-react'
 import type { UserProfile } from '@/lib/api'
 
@@ -45,7 +45,7 @@ function Section({ icon: Icon, title, desc, children }: {
 
 export default function SettingsPage() {
   const { user, logout, refreshUser } = useAuth()
-  const { toast } = useToast()
+
 
   const [loading, setLoading] = useState(true)
   const [savingProfile, setSavingProfile] = useState(false)
@@ -79,9 +79,9 @@ export default function SettingsPage() {
     try {
       await api.updateMe({ name: name.trim(), dateOfBirth: dateOfBirth || undefined, location: location || undefined, language })
       await refreshUser()
-      toast({ title: '¡Guardado!', description: 'Perfil actualizado correctamente' })
+      toast('¡Guardado!', { description: 'Perfil actualizado correctamente' })
     } catch {
-      toast({ title: 'Error', description: 'No se pudo guardar el perfil', variant: 'destructive' })
+      toast.error('Error', { description: 'No se pudo guardar el perfil' })
     } finally {
       setSavingProfile(false)
     }
@@ -98,9 +98,9 @@ export default function SettingsPage() {
     try {
       await api.updateAllergies(allergies)
       await api.updateConditions(conditions)
-      toast({ title: '¡Guardado!', description: 'Información médica actualizada' })
+      toast('¡Guardado!', { description: 'Información médica actualizada' })
     } catch {
-      toast({ title: 'Error', description: 'No se pudo guardar', variant: 'destructive' })
+      toast.error('Error', { description: 'No se pudo guardar' })
     } finally {
       setSavingAllergies(false)
     }

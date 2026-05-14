@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { ArrowLeft, Save, Upload } from 'lucide-react'
 import { api } from '@/lib/api'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 const CLINICAL_STORAGE_KEY = 'kw_clinical_history:v1'
 
@@ -36,7 +36,7 @@ interface FormState {
 
 export default function ClinicalHistoryPage() {
   const router = useRouter()
-  const { toast } = useToast()
+
   const fileRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const storageSyncedRef = useRef(false)
@@ -98,9 +98,9 @@ export default function ClinicalHistoryPage() {
     setSaving(true)
     try {
       await api.updateConditions(form.enfermedades)
-      toast({ title: '¡Guardado!', description: 'Historial clínico actualizado correctamente' })
+      toast('¡Guardado!', { description: 'Historial clínico actualizado correctamente' })
     } catch {
-      toast({ title: 'Error', description: 'No se pudo guardar el historial', variant: 'destructive' })
+      toast.error('Error', { description: 'No se pudo guardar el historial' })
     } finally {
       setSaving(false)
     }

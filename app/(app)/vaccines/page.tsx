@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ArrowLeft, Syringe, Plus, Upload, CircleHelp, Trash2 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 const VACCINES = [
   'COVID-19 (BNT162b2)',
@@ -68,7 +68,6 @@ function serializeRecords(records: VaccineRecord[]) {
 
 export default function VaccinesPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<VaccineForm>(EMPTY_FORM)
   const [records, setRecords] = useState<VaccineRecord[]>(() => {
@@ -92,12 +91,12 @@ export default function VaccinesPage() {
 
   const handleAdd = () => {
     if (!form.name) {
-      toast({ title: 'Falta la vacuna', description: 'Selecciona el nombre de la vacuna', variant: 'destructive' })
+      toast.error('Falta la vacuna', { description: 'Selecciona el nombre de la vacuna' })
       return
     }
     setRecords((r) => [...r, { ...form, id: crypto.randomUUID() }])
     setForm(EMPTY_FORM)
-    toast({ title: 'Vacuna agregada', description: `${form.name} registrada correctamente` })
+    toast('Vacuna agregada', { description: `${form.name} registrada correctamente` })
   }
 
   const handleRemove = (id: string) =>

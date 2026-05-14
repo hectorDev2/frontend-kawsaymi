@@ -7,13 +7,12 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/lib/auth-context'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { Eye, EyeOff, Heart } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
   const { login } = useAuth()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
@@ -26,11 +25,7 @@ export default function LoginPage() {
       await login(email, password)
       router.push('/dashboard')
     } catch {
-      toast({
-        title: 'No pudimos iniciar sesión',
-        description: 'Verifica tu correo y contraseña',
-        variant: 'destructive',
-      })
+      toast.error('No pudimos iniciar sesión', { description: 'Verifica tu correo y contraseña' })
     } finally {
       setIsLoading(false)
     }
