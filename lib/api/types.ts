@@ -80,6 +80,7 @@ export interface Medication {
   endDate?: string
   schedule: string[]   // ISO datetimes
   status: MedicationStatus
+  events?: MedicationEvent[]
 }
 
 export interface CreateMedicationPayload {

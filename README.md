@@ -1,258 +1,253 @@
-# Kawsaymi Care - Medication Adherence App
+# Kawsaymi Care — Medication Adherence App
 
-A Next.js web application for tracking medication adherence with patient and caregiver workflows. Built with TypeScript, Tailwind CSS, and shadcn/ui components.
+Aplicación Next.js para adherencia a medicamentos con flujo completo: crear tratamiento → schedule automático → marcar tomas → próxima dosis → notificaciones.
 
 ## Features
 
-### For Patients
-- **Medication Management**: Add, edit, and track medications with dosage and frequency
-- **Adherence Tracking**: Daily medication logs with visual analytics
-- **Health Data**: Record blood pressure, blood sugar, weight, and heart rate
-- **Caregiver Integration**: Share health data with trusted caregivers and family members
-- **Bilingual Support**: Full English and Spanish language support
-- **Reminders**: Get notified about upcoming medication doses
+### Para Pacientes
+- **Gestión de Medicamentos**: Crear medicación con nombre, dosis, frecuencia y **duración del tratamiento**
+- **Schedule Automático**: Al crear una medicación se generan todos los eventos del tratamiento (N días × frecuencias/día)
+- **Dashboard**: Progreso del día, próxima toma con countdown, lista de tomas ordenadas por hora
+- **Adherencia**: Vista dedicada con círculo de progreso y resumen tomado/pendiente/perdido
+- **Notificaciones**: Browser Notification al acercarse la hora de una dosis + toast in-app
+- **Badge de Próximas Dosis**: Indicador visual en la navegación con cantidad de tomas próximas (2h)
+- **Datos de Salud**: Registro de peso, altura, hábitos y plan de mejora
+- **Tips IA**: Sugerencias generadas con IA sobre cada medicamento (fuentes MINSA/OMS)
+- **Chat de Conocimiento**: RAG asistido por IA para consultas médicas
 
-### For Caregivers
-- **Patient Monitoring**: Track multiple patients' medication adherence
-- **Alert System**: Receive alerts for missed doses and low adherence
-- **Health Insights**: View patient health trends and medication compliance
-- **Secure Communication**: Contact patients directly through the app
+### Para Cuidadores
+- **Monitoreo de Pacientes**: Dashboard con lista de pacientes y su estado
+- **Alertas**: Sistema de notificaciones para dosis perdidas y baja adherencia
+- **Historial Clínico**: Acceso a antecedentes y evolución
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS 4
-- **UI Components**: shadcn/ui
-- **Internationalization**: next-intl
-- **Authentication**: Custom JWT-based auth (client-side ready)
-- **Charts**: Recharts
-- **Forms**: React Hook Form
-- **State Management**: React Context + Hooks
-- **Icons**: Lucide React
+- **Lenguaje**: TypeScript
+- **Estilos**: Tailwind CSS 4
+- **UI**: shadcn/ui + Radix primitives
+- **State Management**: Zustand (adherencia) + React Context (auth, providers)
+- **Gráficos**: Recharts
+- **Iconos**: Lucide React
+- **Mock API**: Mock interno con localStorage (sin backend necesario para desarrollo)
+- **Notificaciones**: Browser Notification API + sonner toasts
 
 ## Project Structure
 
 ```
 ├── app/
-│   └── [locale]/
-│       ├── (app)/                    # Protected routes
-│       │   ├── page.tsx              # Dashboard
-│       │   ├── medications/          # Patient medications
-│       │   ├── adherence/            # Adherence tracking
-│       │   ├── health-data/          # Health metrics
-│       │   ├── caregivers/           # Caregiver management
-│       │   ├── patients/             # Caregiver patient list
-│       │   ├── alerts/               # Caregiver alerts
-│       │   └── settings/             # User settings
-│       ├── (landing)/
-│       │   └── page.tsx              # Landing page
-│       ├── auth/
-│       │   ├── login/                # Login page
-│       │   └── signup/               # Sign up page
-│       └── layout.tsx                # Root layout with providers
+│   ├── (app)/                       # Rutas protegidas (requieren auth)
+│   │   ├── dashboard/page.tsx       # Dashboard con progreso + próxima toma
+│   │   ├── medications/             # Lista y creación de medicamentos
+│   │   ├── adherence/               # Vista de adherencia del día
+│   │   ├── health-data/             # Métricas de salud
+│   │   ├── alerts/                  # Centro de alertas (caregiver)
+│   │   ├── settings/                # Configuración del perfil
+│   │   └── layout.tsx               # Layout protegido + dose notifier
+│   ├── auth/
+│   │   ├── login/                   # Inicio de sesión
+│   │   └── signup/                  # Registro
+│   ├── api/                         # API routes (Next.js, tips IA)
+│   ├── layout.tsx                   # Root layout con providers + Toaster
+│   └── page.tsx                     # Landing page
 ├── components/
-│   ├── ui/                          # shadcn/ui components
-│   ├── navigation.tsx               # Main navigation
-│   ├── medication-card.tsx          # Medication display
-│   ├── patient-status-card.tsx      # Patient monitoring
-│   ├── adherence-chart.tsx          # Charts
-│   └── ...                          # Other components
+│   ├── ui/                          # shadcn/ui + componentes base
+│   ├── navigation.tsx               # Sidebar desktop + bottom nav mobile + badge
+│   ├── medication-card.tsx          # Card de medicamento para lista
+│   ├── medication-card-skeleton.tsx # Skeleton loading
+│   ├── adherence-chart.tsx          # Gráfico de adherencia
+│   ├── patient-status-card.tsx      # Card de paciente (caregiver)
+│   └── empty-state.tsx              # Estado vacío reutilizable
+├── hooks/
+│   ├── use-toast.ts                 # Hook de toast (sonner)
+│   ├── use-mobile.ts                # Detección de mobile
+│   └── use-dose-notifier.ts         # Notificador de dosis cada 30s
 ├── lib/
-│   ├── api.ts                       # API client
-│   ├── auth-context.tsx             # Authentication context
-│   └── utils.ts                     # Utilities
-├── middleware.ts                    # i18n routing
-├── i18n.ts                          # i18n config
-└── messages/
-    ├── en.json                      # English translations
-    └── es.json                      # Spanish translations
+│   ├── api/                         # API client (mock + HTTP)
+│   │   ├── types.ts                 # Interfaces compartidas (ApiContract, etc.)
+│   │   ├── mock.ts                  # Mock API con localStorage
+│   │   ├── http.ts                  # HTTP client para backend real
+│   │   └── index.ts                 # Feature flag mock/real
+│   ├── stores/
+│   │   └── adherence-store.ts       # Zustand store (eventos, nextDose)
+│   ├── auth-context.tsx             # Auth provider (React Context)
+│   ├── user-data-context.tsx        # Datos de usuario + medicamentos
+│   ├── health-context.tsx           # Contexto de salud para tips IA
+│   ├── ai-tip-cache.ts             # Cache de tips en localStorage
+│   ├── data-events.ts               # Event bus CustomEvent
+│   └── utils.ts                     # cn() utility
+└── public/                          # Assets estáticos
+```
+
+## State Management
+
+| Capa | Tecnología | Responsabilidad |
+|------|-----------|-----------------|
+| **Adherencia** | Zustand | todayEvents, weekEvents, nextDose, markTaken/markMissed, loadToday |
+| **Auth** | React Context | user, login, logout, isAuthenticated |
+| **User Data** | React Context | medications (lista), healthProfile, polypharmacy |
+| **Health Context** | React Context | String contextual para tips IA |
+
+### Zustand Adherence Store
+
+```typescript
+useAdherenceStore.getState()
+// {
+//   todayEvents: MedicationEvent[]
+//   weekEvents: MedicationEvent[]
+//   nextDose: MedicationEvent | null     // próximo evento PENDING
+//   todayAdherence: AdherenceStats | null
+//   isLoading: boolean
+//   markTaken: (eventId) => Promise<void> // optimistic update
+//   markMissed: (eventId) => Promise<void> // optimistic update
+//   subscribeToEvents: () => () => void    // escucha data-events
+// }
+```
+
+Los selectores por slice evitan re-renders innecesarios:
+```tsx
+const events = useAdherenceStore((s) => s.todayEvents)
+const nextDose = useAdherenceStore((s) => s.nextDose)
 ```
 
 ## Getting Started
 
-### Prerequisites
+### Prerrequisitos
 - Node.js 18+
-- pnpm (or npm/yarn)
+- npm / pnpm
 
-### Installation
+### Instalación
 
-1. **Clone or download the project**
 ```bash
-cd kawsaymi-care
+npm install
 ```
 
-2. **Install dependencies**
-```bash
-pnpm install
-```
+### Entorno
 
-3. **Set up environment variables**
-```bash
-cp .env.example .env.local
-```
-
-Configure these variables:
 ```env
+# Modo mock (sin backend, datos precargados)
+NEXT_PUBLIC_USE_MOCK=true
+
+# Modo real (apunta al backend)
 NEXT_PUBLIC_API_URL=https://kawsaymi-care-backend.onrender.com
 NEXT_PUBLIC_USE_MOCK=false
-NODE_ENV=development
 ```
 
-4. **Run the development server**
-```bash
-pnpm dev
-```
-
-Visit `http://localhost:3000` to see the app.
-
-## Project Architecture
-
-### Authentication Flow
-1. User logs in with email/password on `/auth/login`
-2. AuthProvider calls the backend (`/auth/login`)
-3. Access token stored in localStorage (see `lib/api/http.ts`)
-4. Protected routes redirect unauthenticated users to login
-5. User role (patient/caregiver) determines available routes
-
-### State Management
-- **Authentication**: React Context (AuthProvider)
-- **UI State**: React Hooks (useState, useCallback)
-- **Client Data**: TanStack Query ready (for future backend integration)
-
-### Internationalization
-- **Library**: next-intl
-- **Languages**: English (en), Spanish (es)
-- **URL Structure**: `/en/medications`, `/es/medicamentos`
-- **Route Switching**: Language selector in settings
-- **Translation Files**: `messages/{locale}.json`
-
-## API Integration
-
-The API client lives in `lib/api/*`.
-
-### Backend Endpoints Used
-
-**Authentication**
-- `POST /auth/register`
-- `POST /auth/login`
-- `POST /auth/refresh`
-- `POST /auth/logout`
-
-**Users**
-- `GET /users/me`
-- `PUT /users/me`
-- `PUT /users/me/allergies`
-- `PUT /users/me/conditions`
-- `DELETE /users/me`
-
-**Medications**
-- `GET /medications`
-- `GET /medications/:id`
-- `POST /medications`
-- `PUT /medications/:id`
-- `PATCH /medications/:id/status`
-- `DELETE /medications/:id`
-
-**Events**
-- `GET /events`
-- `GET /events/today`
-- `GET /events/week`
-- `PATCH /events/:id/mark-taken`
-- `PATCH /events/:id/mark-missed`
-
-**Adherence**
-- `GET /adherence/today`
-- `GET /adherence/week`
-- `GET /adherence/month`
-- `GET /adherence/stats`
-
-**Health**
-- `GET /health/profile`
-- `POST /health/weight`
-- `GET /health/imc`
-- `GET /health/polypharmacy`
-
-**Knowledge (RAG)**
-- `GET /knowledge/search`
-- `POST /knowledge/answer`
-- `POST /knowledge/documents` (ADMIN)
-
-## Customization
-
-### Changing Colors
-Edit `/app/globals.css` CSS custom properties:
-```css
-:root {
-  --primary: oklch(0.45 0.22 263);  /* Blue */
-  --secondary: oklch(0.55 0.18 142);  /* Green */
-  /* ... */
-}
-```
-
-### Adding Languages
-1. Create new translation file: `messages/fr.json`
-2. Update `i18n.ts` locales array
-3. Add to navigation language selector
-
-### Customizing Components
-All shadcn/ui components are in `components/ui/`. Modify them freely.
-
-## Deployment
-
-### To Vercel
-1. Push code to GitHub
-2. Connect repository to Vercel
-3. Set environment variables in Vercel dashboard
-4. Deploy
+### Desarrollo
 
 ```bash
+npm run dev
+# → http://localhost:3000
+```
+
+## Flujo de Adherencia
+
+```
+1. /medications/new
+   ├── Nombre + Dosis + Frecuencia + Duración + Fecha inicio
+   └── buildSchedule() → ISO[] (N días × M veces/día)
+
+2. POST /medications
+   ├── Backend persiste medicación + eventos PENDING
+   └── Response: { medication: { ...events } }
+
+3. /dashboard
+   ├── "Próxima toma" widget (primer PENDING ordenado)
+   ├── Countdown + barra de progreso
+   └── Botón "Tomar" → optimistic update
+
+4. Notificador (cada 30s)
+   ├── Busca eventos PENDING en ventana de 5 min
+   ├── Browser Notification
+   └── Toast sonner (arriba derecha)
+
+5. Badge en nav
+   ├── Eventos PENDING dentro de 2h
+   └── Link directo a /adherence
+```
+
+## API Contract
+
+### Autenticación
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/auth/register` | Registro |
+| POST | `/auth/login` | Login → JWT |
+| POST | `/auth/refresh` | Refresh token |
+| POST | `/auth/logout` | Logout |
+
+### Medicamentos
+| Método | Endpoint | Body | Descripción |
+|--------|----------|------|-------------|
+| GET | `/medications` | — | Lista |
+| GET | `/medications/:id` | — | Detalle |
+| POST | `/medications` | `{ name, dose, frequency, intervalHours, startDate, endDate, schedule }` | **Crea medicación + eventos** |
+| PUT | `/medications/:id` | `{ schedule, ... }` | Reemplaza schedule + regenera eventos |
+| PATCH | `/medications/:id/status` | `{ status }` | Cambia estado |
+| DELETE | `/medications/:id` | — | Elimina medicación + eventos |
+
+### Eventos
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/events` | Filtrados por query params |
+| GET | `/events/today` | Eventos del día |
+| GET | `/events/week` | Eventos de la semana |
+| PATCH | `/events/:id/mark-taken` | Marcar como tomado |
+| PATCH | `/events/:id/mark-missed` | Marcar como perdido |
+
+### Adherencia
+| GET | `/adherence/today` | Stats del día |
+| GET | `/adherence/week` | Stats de la semana |
+| GET | `/adherence/month` | Stats del mes |
+| GET | `/adherence/stats` | Stats completas |
+
+### Salud
+| GET | `/health/profile` | Perfil de salud |
+| POST | `/health/weight` | Actualizar peso |
+| GET | `/health/imc` | IMC calculado |
+| GET | `/health/polypharmacy` | Info de polifarmacia |
+
+### Conocimiento (RAG)
+| GET | `/knowledge/search` | Búsqueda semántica |
+| POST | `/knowledge/answer` | Pregunta con respuesta |
+| POST | `/knowledge/documents` | (Admin) Ingestar documentos |
+
+## Modo Mock vs Real
+
+| Variable | Mock | Real |
+|----------|------|------|
+| `NEXT_PUBLIC_USE_MOCK=true` | Usa `lib/api/mock.ts` | — |
+| `NEXT_PUBLIC_USE_MOCK=false` | — | Usa `lib/api/http.ts` |
+| `NEXT_PUBLIC_API_URL` | Opcional | URL del backend |
+
+El mock persiste en localStorage. Ideal para desarrollo offline o demo.
+
+## Arquitectura de Notificaciones
+
+```
+useDoseNotifier() ← app/(app)/layout.tsx
+  │
+  ├── setInterval 30s
+  │
+  ├── useAdherenceStore.getState().todayEvents + weekEvents
+  │
+  ├── ¿evento PENDING en ventana 5 min?
+  │   ├── Sí → Browser Notification + toast sonner
+  │   └── No → espera próxima iteración
+  │
+  └── notifiedRef (Set<eventId>) evita duplicados
+```
+
+## Despliegue
+
+### Vercel
+```bash
+npm run build
 vercel deploy
 ```
 
-### To Other Platforms
-- **Environment**: Node.js 18+
-- **Build**: `pnpm build`
-- **Start**: `pnpm start`
-- **Port**: 3000
-
-## Security Considerations
-
-- JWT tokens stored in httpOnly cookies
-- CORS configured for cross-origin requests
-- Input validation on all forms
-- SQL injection protection via parameterized queries (backend responsibility)
-- XSS protection via React's built-in escaping
-
-## Testing
-
-```bash
-# Future: Add test scripts
-pnpm test
+### Variables de entorno requeridas en producción
+```env
+NEXT_PUBLIC_API_URL=https://tu-backend.com
+NEXT_PUBLIC_USE_MOCK=false
 ```
-
-## Contributing
-
-Guidelines for contributing:
-1. Create feature branches
-2. Follow TypeScript best practices
-3. Use existing component patterns
-4. Update translations for new strings
-5. Test on mobile and desktop
-
-## License
-
-All rights reserved - Kawsaymi Care
-
-## Support
-
-For questions or issues, contact support@kawsaymicare.com
-
-## Roadmap
-
-- Real-time notifications
-- Offline support with service workers
-- Video consultations with doctors
-- Integration with health wearables
-- Advanced analytics and reporting
-- Mobile app (React Native)

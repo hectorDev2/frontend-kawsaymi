@@ -475,7 +475,7 @@ export const mockApi: ApiContract = {
     emitDataChanged('events')
     emitDataChanged('adherence')
     emitDataChanged('health')
-    return { medication: newMed }
+    return { medication: { ...newMed, events: newEvents } }
   },
 
   async updateMedication(id, payload: UpdateMedicationPayload) {
@@ -504,7 +504,7 @@ export const mockApi: ApiContract = {
     emitDataChanged('events')
     emitDataChanged('adherence')
     emitDataChanged('health')
-    return { medication: meds[idx] }
+    return { medication: { ...meds[idx], events: regeneratedEvents } }
   },
 
   async patchMedicationStatus(id, status: MedicationStatus) {
