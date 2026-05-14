@@ -4,7 +4,8 @@ import { useAuth } from '@/lib/auth-context'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Home, Pill, Activity, Heart, Users, AlertCircle, Settings, LogOut, ChevronRight, User, ClipboardList, Syringe, Brain } from 'lucide-react'
+import { useAdherenceStore } from '@/lib/stores/adherence-store'
+import { Home, Pill, Activity, Heart, Users, AlertCircle, Settings, LogOut, ChevronRight, User, ClipboardList, Syringe, Brain, Bell } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,16 +49,36 @@ export function Navigation() {
   const isActive = (href: string) => pathname === href
   const userInitials = (user?.name ?? '?').split(' ').map((w) => w[0]).slice(0, 2).join('')
 
+  const upcomingCount = useAdherenceStore((s) =>
+    s.todayEvents.filter((e) => {
+      if (e.status !== 'PENDING') return false
+      const diff = new Date(e.dateTimeScheduled).getTime() - Date.now()
+      return diff > 0 && diff <= 2 * 60 * 60 * 1000
+    }).length,
+  )
+
   return (
     <>
       {/* ── DESKTOP SIDEBAR ── */}
       <nav className="hidden md:flex md:fixed md:left-0 md:top-0 md:w-64 md:h-screen md:flex-col md:border-r md:border-border bg-card z-30">
         {/* Logo */}
         <div className="p-5 border-b border-border">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Kawsaymi Care" width={65} height={65} className="object-contain flex-shrink-0" />
-            <p className="text-xs text-muted-foreground leading-tight">Adherencia a medicamentos</p>
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <Image src="/logo.png" alt="Kawsaymi Care" width={65} height={65} className="object-contain flex-shrink-0" />
+              <p className="text-xs text-muted-foreground leading-tight">Adherencia a medicamentos</p>
+            </Link>
+            {upcomingCount > 0 && (
+              <Link href="/adherence" className="relative">
+                <button className="w-9 h-9 rounded-xl border border-border flex items-center justify-center hover:bg-accent transition-colors">
+                  <Bell className="w-4 h-4 text-foreground" />
+                </button>
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-[11px] font-bold rounded-full flex items-center justify-center">
+                  {upcomingCount}
+                </span>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Nav items */}
@@ -126,6 +147,19 @@ export function Navigation() {
           <Image src="/logo.png" alt="Kawsaymi Care" width={65} height={65} className="object-contain" />
         </Link>
 
+        {/* Notificaciones + avatar */}
+        <div className="flex items-center gap-2">
+          {upcomingCount > 0 && (
+            <Link href="/adherence" className="relative">
+              <button className="w-10 h-10 rounded-xl border border-border flex items-center justify-center hover:bg-accent transition-colors">
+                <Bell className="w-5 h-5 text-foreground" />
+              </button>
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-[11px] font-bold rounded-full flex items-center justify-center">
+                {upcomingCount}
+              </span>
+            </Link>
+          )}
+
         {/* Avatar con dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -150,7 +184,8 @@ export function Navigation() {
               Cerrar sesión
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenu>
+        </div>
       </header>
 
       {/* ── MOBILE BOTTOM NAV ── */}

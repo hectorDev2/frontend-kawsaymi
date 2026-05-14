@@ -275,6 +275,7 @@ function PatientDashboard({ user }: { user: any }) {
   const events = useAdherenceStore((s) => s.todayEvents)
   const adherence = useAdherenceStore((s) => s.todayAdherence)
   const adhLoading = useAdherenceStore((s) => s.isLoading)
+  const nextDose = useAdherenceStore((s) => s.nextDose)
   const markTaken = useAdherenceStore((s) => s.markTaken)
   const markMissed = useAdherenceStore((s) => s.markMissed)
   const loadToday = useAdherenceStore((s) => s.loadToday)
@@ -357,6 +358,55 @@ function PatientDashboard({ user }: { user: any }) {
           <CircularProgress value={progress} />
         </div>
       </div>
+
+      {/* Próxima toma */}
+      {nextDose && (
+        <div className="card-elevated p-5 mb-6 border-l-4 border-l-primary">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Próxima toma</p>
+              <p className="font-bold text-lg leading-tight mt-0.5">{nextDose.medicationName}</p>
+              <p className="text-base text-muted-foreground">
+                {nextDose.medicationDose} ·{' '}
+                {new Date(nextDose.dateTimeScheduled).toLocaleTimeString('es', {
+                  hour: '2-digit', minute: '2-digit', hour12: false,
+                })}{' '}
+                hs
+              </p>
+              {(() => {
+                const diff = new Date(nextDose.dateTimeScheduled).getTime() - Date.now()
+                if (diff <= 0) return <p className="text-sm text-destructive font-semibold mt-1">¡Ya deberías haberla tomado!</p>
+                const hours = Math.floor(diff / 3600000)
+                const mins = Math.floor((diff % 3600000) / 60000)
+                return (
+                  <div className="mt-2">
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, Math.max(0, 100 - (diff / 86400000) * 100))}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 font-medium">
+                      Faltan {hours > 0 ? `${hours}h ` : ''}{mins}min
+                    </p>
+                  </div>
+                )
+              })()}
+            </div>
+            <Button
+              size="sm"
+              className="h-10 px-4 font-bold flex-shrink-0 self-center"
+              onClick={() => handleMark(nextDose.id, 'taken')}
+            >
+              <CheckCircle2 className="w-4 h-4 mr-1.5" />
+              Tomar
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Tomas de hoy */}
       <div className="mb-6">

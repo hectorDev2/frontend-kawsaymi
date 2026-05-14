@@ -459,6 +459,18 @@ export const mockApi: ApiContract = {
     const meds = getMedicationsForUser(user.id)
     meds.push(newMed)
     saveMedicationsForUser(user.id, meds)
+
+    const existingEvents = getOrCreateEvents(user.id)
+    const newEvents: MedicationEvent[] = payload.schedule.map((schedTime) => ({
+      id: uid(),
+      medicationId: newMed.id,
+      medicationName: newMed.name,
+      medicationDose: newMed.dose,
+      dateTimeScheduled: schedTime,
+      status: 'PENDING' as const,
+    }))
+    saveEvents(user.id, [...existingEvents, ...newEvents])
+
     emitDataChanged('medications')
     emitDataChanged('events')
     emitDataChanged('adherence')
@@ -474,6 +486,20 @@ export const mockApi: ApiContract = {
     if (idx === -1) throw new Error('Medicamento no encontrado')
     Object.assign(meds[idx], payload)
     saveMedicationsForUser(user.id, meds)
+
+    const allEvents = getOrCreateEvents(user.id)
+    const keptEvents = allEvents.filter((e) => e.medicationId !== id)
+    const schedule = payload.schedule ?? meds[idx].schedule
+    const regeneratedEvents: MedicationEvent[] = schedule.map((schedTime) => ({
+      id: uid(),
+      medicationId: id,
+      medicationName: meds[idx].name,
+      medicationDose: meds[idx].dose,
+      dateTimeScheduled: schedTime,
+      status: 'PENDING' as const,
+    }))
+    saveEvents(user.id, [...keptEvents, ...regeneratedEvents])
+
     emitDataChanged('medications')
     emitDataChanged('events')
     emitDataChanged('adherence')
@@ -489,6 +515,28 @@ export const mockApi: ApiContract = {
     if (idx === -1) throw new Error('Medicamento no encontrado')
     meds[idx].status = status
     saveMedicationsForUser(user.id, meds)
+
+    if (status === 'ACTIVE') {
+      const allEvents = getOrCreateEvents(user.id)
+      const existingMedEvents = allEvents.filter((e) => e.medicationId === id)
+      const schedule = meds[idx].schedule
+      const scheduleTimes = new Set(schedule)
+      const existingTimes = new Set(existingMedEvents.map((e) => e.dateTimeScheduled))
+      const newEvents: MedicationEvent[] = schedule
+        .filter((t) => !existingTimes.has(t))
+        .map((schedTime) => ({
+          id: uid(),
+          medicationId: id,
+          medicationName: meds[idx].name,
+          medicationDose: meds[idx].dose,
+          dateTimeScheduled: schedTime,
+          status: 'PENDING' as const,
+        }))
+      if (newEvents.length > 0) {
+        saveEvents(user.id, [...allEvents, ...newEvents])
+      }
+    }
+
     emitDataChanged('medications')
     emitDataChanged('events')
     emitDataChanged('adherence')
@@ -501,6 +549,10 @@ export const mockApi: ApiContract = {
     const user = requireAuth()
     const meds = getMedicationsForUser(user.id)
     saveMedicationsForUser(user.id, meds.filter((m) => m.id !== id))
+
+    const allEvents = getOrCreateEvents(user.id)
+    saveEvents(user.id, allEvents.filter((e) => e.medicationId !== id))
+
     emitDataChanged('medications')
     emitDataChanged('events')
     emitDataChanged('adherence')

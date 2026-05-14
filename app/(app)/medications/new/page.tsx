@@ -18,15 +18,19 @@ const FREQ_OPTIONS = [
   { label: '4 veces', value: 4, hours: 6, times: ['08:00', '12:00', '16:00', '20:00'] },
 ]
 
-function buildSchedule(startDate: string, times: string[]): string[] {
-  // `YYYY-MM-DD` parsed with `new Date()` is UTC and shifts the local day.
-  // Build the datetime in local time explicitly to keep the selected date.
+const DURATION_OPTIONS = [7, 14, 30, 60, 90]
+
+function buildSchedule(startDate: string, times: string[], duration: number): string[] {
   const [y, mo, da] = startDate.split('-').map(Number)
-  return times.map((t) => {
-    const [h, m] = t.split(':').map(Number)
-    const d = new Date(y, (mo ?? 1) - 1, da ?? 1, h ?? 0, m ?? 0, 0, 0)
-    return d.toISOString()
-  })
+  const result: string[] = []
+  for (let day = 0; day < duration; day++) {
+    for (const t of times) {
+      const [h, m] = t.split(':').map(Number)
+      const d = new Date(y, (mo ?? 1) - 1, (da ?? 1) + day, h ?? 0, m ?? 0, 0, 0)
+      result.push(d.toISOString())
+    }
+  }
+  return result
 }
 
 export default function NewMedicationPage() {
@@ -37,6 +41,7 @@ export default function NewMedicationPage() {
   const [name, setName] = useState('')
   const [dose, setDose] = useState('')
   const [freq, setFreq] = useState(FREQ_OPTIONS[0])
+  const [duration, setDuration] = useState(30)
   const [instructions, setInstructions] = useState('')
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [saving, setSaving] = useState(false)
@@ -103,6 +108,11 @@ export default function NewMedicationPage() {
     setError('')
     setSaving(true)
     try {
+      const start = new Date(startDate)
+      const end = new Date(start)
+      end.setDate(end.getDate() + duration - 1)
+      const endDate = end.toISOString().slice(0, 10)
+
       await api.createMedication({
         name: name.trim(),
         dose: dose.trim(),
@@ -110,7 +120,8 @@ export default function NewMedicationPage() {
         intervalHours: freq.hours,
         instructions: instructions.trim() || undefined,
         startDate,
-        schedule: buildSchedule(startDate, freq.times),
+        endDate,
+        schedule: buildSchedule(startDate, freq.times, duration),
       })
       router.push('/medications')
     } catch (e: any) {
@@ -177,6 +188,32 @@ export default function NewMedicationPage() {
           </div>
           <p className="text-xs text-muted-foreground">
             Horarios sugeridos: {freq.times.join(' · ')}
+          </p>
+        </div>
+
+        {/* Duración */}
+        <div className="card-elevated p-5 space-y-3">
+          <label className="text-sm font-semibold">¿Cuánto dura el tratamiento?</label>
+          <div className="grid grid-cols-5 gap-2">
+            {DURATION_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => setDuration(opt)}
+                className={`py-3 rounded-xl text-sm font-semibold border transition-all ${
+                  duration === opt
+                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                    : 'border-border hover:bg-accent'
+                }`}
+              >
+                {opt}d
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {duration === 1 ? '1 día' : `${duration} días`} · Hasta{' '}
+            {new Date(new Date(startDate).getTime() + (duration - 1) * 86400000).toLocaleDateString('es', {
+              day: 'numeric', month: 'long', year: 'numeric',
+            })}
           </p>
         </div>
 

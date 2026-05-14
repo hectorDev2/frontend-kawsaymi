@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Navigation } from '@/components/navigation'
 import { HealthContextProvider } from '@/lib/health-context'
+import { useDoseNotifier } from '@/hooks/use-dose-notifier'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
+
+  useDoseNotifier()
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
