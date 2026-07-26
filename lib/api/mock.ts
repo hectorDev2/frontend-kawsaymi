@@ -10,6 +10,7 @@ import type {
   AuthUser,
   Medication,
   MedicationEvent,
+  ClinicalAlert,
   AdherenceStats,
   HealthProfile,
   UserProfile,
@@ -35,6 +36,7 @@ const KEYS = {
   medications: 'kw_mock_medications',
   events: 'kw_mock_events',
   health: 'kw_mock_health',
+  alerts: 'kw_mock_alerts',
 }
 
 const LEGACY_TOKEN_KEY = 'kw_mock_token'
@@ -277,6 +279,54 @@ function calcAdherence(events: MedicationEvent[]): AdherenceStats {
   }
 }
 
+function simulateRuleEngine(user: StoredUser, medicationName: string, medicationId: string): ClinicalAlert[] {
+  const alerts: ClinicalAlert[] = []
+  const conditions = user.conditions ?? []
+  const name = medicationName.toLowerCase()
+
+  const interactions: Record<string, Array<{ condition: string; severity: 'HIGH' | 'MEDIUM'; msg: string }>> = {
+    ibuprofeno: [
+      { condition: 'gastritis', severity: 'HIGH', msg: 'Los AINEs como el ibuprofeno pueden irritar la mucosa gástrica y empeorar la gastritis.' },
+      { condition: 'hipertensión', severity: 'HIGH', msg: 'Los AINEs pueden elevar la presión arterial y reducir la eficacia de los antihipertensivos.' },
+      { condition: 'diabetes', severity: 'MEDIUM', msg: 'El ibuprofeno puede enmascarar signos de infección en pacientes diabéticos.' },
+    ],
+    prednisona: [
+      { condition: 'diabetes', severity: 'HIGH', msg: 'Los corticosteroides pueden elevar los niveles de glucosa en sangre. Monitoreo glucémico frecuente.' },
+      { condition: 'hipertensión', severity: 'HIGH', msg: 'Los corticosteroides pueden elevar la presión arterial por retención de sodio y agua.' },
+      { condition: 'gastritis', severity: 'MEDIUM', msg: 'Los corticosteroides aumentan el riesgo de úlcera gástrica.' },
+    ],
+    metformina: [
+      { condition: 'insuficiencia renal', severity: 'HIGH', msg: 'La metformina se elimina por vía renal. Riesgo de acidosis láctica si TFG < 30.' },
+    ],
+    warfarina: [
+      { condition: 'gastritis', severity: 'HIGH', msg: 'La warfarina aumenta el riesgo de sangrado gastrointestinal.' },
+    ],
+    aspirina: [
+      { condition: 'gastritis', severity: 'HIGH', msg: 'La aspirina irrita la mucosa gástrica y aumenta el riesgo de sangrado.' },
+    ],
+  }
+
+  for (const [drugKey, drugInteractions] of Object.entries(interactions)) {
+    if (!name.includes(drugKey)) continue
+    for (const interaction of drugInteractions) {
+      const match = conditions.some((c: string) => c.toLowerCase().includes(interaction.condition))
+      if (!match) continue
+      alerts.push({
+        id: uid(),
+        userId: user.id,
+        type: 'CLINICAL_INTERACTION',
+        severity: interaction.severity,
+        title: `Interacción: ${medicationName} y ${interaction.condition}`,
+        description: interaction.msg,
+        medicationId,
+        read: false,
+        createdAt: new Date().toISOString(),
+      })
+    }
+  }
+  return alerts
+}
+
 // ─── Mock API implementation ──────────────────────────────────────────────────
 
 export const mockApi: ApiContract = {
@@ -438,9 +488,7 @@ export const mockApi: ApiContract = {
   async getMedications() {
     await delay()
     const user = requireAuth()
-    const medications = getMedicationsForUser(user.id).filter(
-      (m) => m.status === 'ACTIVE'
-    )
+    const medications = getMedicationsForUser(user.id)
     return { medications }
   },
 
@@ -471,11 +519,17 @@ export const mockApi: ApiContract = {
     }))
     saveEvents(user.id, [...existingEvents, ...newEvents])
 
+    const alerts = simulateRuleEngine(user, newMed.name, newMed.id)
+    if (alerts.length > 0) {
+      const storedAlerts = load<ClinicalAlert[]>(KEYS.alerts, [])
+      save(KEYS.alerts, [...storedAlerts, ...alerts])
+    }
+
     emitDataChanged('medications')
     emitDataChanged('events')
     emitDataChanged('adherence')
     emitDataChanged('health')
-    return { medication: { ...newMed, events: newEvents } }
+    return { medication: { ...newMed, events: newEvents }, alerts }
   },
 
   async updateMedication(id, payload: UpdateMedicationPayload) {
@@ -736,7 +790,59 @@ export const mockApi: ApiContract = {
     const user = requireAuth()
     const meds = getMedicationsForUser(user.id)
     const activeMedications = meds.filter((m) => m.status === 'ACTIVE').length
-    return { activeMedications, polypharmacy: activeMedications >= 5 }
+    let level: string, risk: 'BAJO' | 'MODERADO' | 'ALTO'
+    if (activeMedications >= 10) { level = 'ALTO'; risk = 'ALTO' }
+    else if (activeMedications >= 5) { level = 'MODERADO'; risk = 'MODERADO' }
+    else { level = 'BAJO'; risk = 'BAJO' }
+    return { activeMedications, polypharmacy: activeMedications >= 5, level, risk }
+  },
+
+  // ── Clinical Alerts ─────────────────────────────────────────────────────────
+
+  async getAlerts() {
+    await delay()
+    const user = requireAuth()
+    const alerts = load<ClinicalAlert[]>(KEYS.alerts, []).filter((a) => a.userId === user.id)
+    return { alerts }
+  },
+
+  async getAlertsUnreadCount() {
+    await delay()
+    const user = requireAuth()
+    const alerts = load<ClinicalAlert[]>(KEYS.alerts, []).filter((a) => a.userId === user.id && !a.read)
+    return { unreadCount: alerts.length }
+  },
+
+  async markAlertRead(id) {
+    await delay()
+    const user = requireAuth()
+    const alerts = load<ClinicalAlert[]>(KEYS.alerts, [])
+    const idx = alerts.findIndex((a) => a.id === id && a.userId === user.id)
+    if (idx !== -1) alerts[idx].read = true
+    save(KEYS.alerts, alerts)
+    emitDataChanged('alerts')
+    return { success: true }
+  },
+
+  async markAllAlertsRead() {
+    await delay()
+    const user = requireAuth()
+    const alerts = load<ClinicalAlert[]>(KEYS.alerts, [])
+    for (const alert of alerts) {
+      if (alert.userId === user.id) alert.read = true
+    }
+    save(KEYS.alerts, alerts)
+    emitDataChanged('alerts')
+    return { success: true }
+  },
+
+  async deleteAlert(id) {
+    await delay()
+    const user = requireAuth()
+    const alerts = load<ClinicalAlert[]>(KEYS.alerts, [])
+    save(KEYS.alerts, alerts.filter((a) => !(a.id === id && a.userId === user.id)))
+    emitDataChanged('alerts')
+    return { success: true }
   },
 
   // ── Knowledge (no mock implementation) ─────────────────────────────────────

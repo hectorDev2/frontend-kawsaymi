@@ -14,6 +14,7 @@ import type {
   EventsQuery,
   UpdateProfilePayload,
   AdherenceStats,
+  ClinicalAlert,
   KnowledgeAnswerBody,
 } from './types'
 
@@ -223,6 +224,29 @@ export const httpApi: ApiContract = {
   },
   async getPolypharmacy() {
     return req('GET', '/health/polypharmacy')
+  },
+
+  // Clinical Alerts
+  async getAlerts() {
+    return req('GET', '/alerts')
+  },
+  async getAlertsUnreadCount() {
+    return req('GET', '/alerts/unread-count')
+  },
+  async markAlertRead(id: string) {
+    const res = await req<{ success: boolean }>('PATCH', `/alerts/${id}/read`)
+    emitDataChanged('alerts')
+    return res
+  },
+  async markAllAlertsRead() {
+    const res = await req<{ success: boolean }>('PATCH', '/alerts/read-all')
+    emitDataChanged('alerts')
+    return res
+  },
+  async deleteAlert(id: string) {
+    const res = await req<{ success: boolean }>('DELETE', `/alerts/${id}`)
+    emitDataChanged('alerts')
+    return res
   },
 
   // Knowledge

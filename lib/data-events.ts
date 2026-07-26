@@ -7,6 +7,7 @@ export type DataChangeType =
   | 'events'
   | 'adherence'
   | 'health'
+  | 'alerts'
 
 const EVENT_NAME = 'kw:data:changed'
 

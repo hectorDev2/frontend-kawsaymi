@@ -69,18 +69,34 @@ export interface UpdateProfilePayload {
 
 export type MedicationStatus = 'ACTIVE' | 'COMPLETED' | 'SUSPENDED'
 
+export interface ClinicalAlert {
+  id: string
+  userId: string
+  type: 'CLINICAL_INTERACTION' | 'POLYPHARMACY_HIGH' | 'POLYPHARMACY_MODERATE' | 'ADHERENCE_LOW' | 'MISSED_DOSE' | 'SIDE_EFFECT' | 'HEALTH_METRIC'
+  severity: 'HIGH' | 'MEDIUM' | 'LOW'
+  title: string
+  description: string
+  medicationId?: string | null
+  read: boolean
+  createdAt: string
+}
+
 export interface Medication {
   id: string
   name: string
   dose: string
   frequency: number
   intervalHours: number
+  reasonForPrescription?: string
+  administrationRoute?: string
+  isPermanent?: boolean
   instructions?: string
   startDate: string
   endDate?: string
   schedule: string[]   // ISO datetimes
   status: MedicationStatus
   events?: MedicationEvent[]
+  alerts?: ClinicalAlert[]
 }
 
 export interface CreateMedicationPayload {
@@ -88,6 +104,9 @@ export interface CreateMedicationPayload {
   dose: string
   frequency: number
   intervalHours: number
+  reasonForPrescription?: string
+  administrationRoute?: string
+  isPermanent?: boolean
   instructions?: string
   startDate: string
   endDate?: string
@@ -99,6 +118,9 @@ export interface UpdateMedicationPayload {
   dose?: string
   frequency?: number
   intervalHours?: number
+  reasonForPrescription?: string
+  administrationRoute?: string
+  isPermanent?: boolean
   instructions?: string
   startDate?: string
   endDate?: string
@@ -148,6 +170,8 @@ export interface HealthProfile {
 export interface PolypharmacyInfo {
   activeMedications: number
   polypharmacy: boolean
+  level: string
+  risk: 'BAJO' | 'MODERADO' | 'ALTO'
 }
 
 // ─── Knowledge (RAG) ─────────────────────────────────────────────────────────
@@ -251,6 +275,13 @@ export interface ApiContract {
   updateHeight: (height: number) => Promise<{ health: HealthProfile }>
   getImc: () => Promise<{ imc: number | null }>
   getPolypharmacy: () => Promise<PolypharmacyInfo>
+
+  // Clinical Alerts
+  getAlerts: () => Promise<{ alerts: ClinicalAlert[] }>
+  getAlertsUnreadCount: () => Promise<{ unreadCount: number }>
+  markAlertRead: (id: string) => Promise<{ success: boolean }>
+  markAllAlertsRead: () => Promise<{ success: boolean }>
+  deleteAlert: (id: string) => Promise<{ success: boolean }>
 
   // Knowledge (RAG)
   knowledgeSearch: (q: string, k?: number) => Promise<KnowledgeSearchResponse>
