@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-24T04:35:54.158Z",
+  "title": "Design System: Kawsaymi Care",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Teal Profundo",
+        "canonical": "oklch(0.40 0.08 210)",
+        "tonalRamp": [
+          "oklch(0.15 0.04 210)",
+          "oklch(0.22 0.055 210)",
+          "oklch(0.29 0.065 210)",
+          "oklch(0.36 0.075 210)",
+          "oklch(0.43 0.08 210)",
+          "oklch(0.55 0.07 210)",
+          "oklch(0.70 0.05 210)",
+          "oklch(0.85 0.03 210)"
+        ]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Brisa de Mar",
+        "canonical": "oklch(0.78 0.09 205)",
+        "tonalRamp": [
+          "oklch(0.20 0.03 205)",
+          "oklch(0.30 0.04 205)",
+          "oklch(0.42 0.06 205)",
+          "oklch(0.55 0.075 205)",
+          "oklch(0.67 0.085 205)",
+          "oklch(0.78 0.09 205)",
+          "oklch(0.88 0.06 205)",
+          "oklch(0.95 0.03 205)"
+        ]
+      },
+      "destructive": {
+        "role": "destructive",
+        "displayName": "Alerta",
+        "canonical": "oklch(0.56 0.23 27)",
+        "tonalRamp": [
+          "oklch(0.20 0.10 27)",
+          "oklch(0.30 0.14 27)",
+          "oklch(0.40 0.18 27)",
+          "oklch(0.50 0.21 27)",
+          "oklch(0.56 0.23 27)",
+          "oklch(0.65 0.18 27)",
+          "oklch(0.78 0.12 27)",
+          "oklch(0.90 0.06 27)"
+        ]
+      },
+      "brand-green": {
+        "role": "custom",
+        "displayName": "Verde Costa",
+        "canonical": "oklch(0.73 0.10 154)",
+        "tonalRamp": []
+      },
+      "brand-blue": {
+        "role": "custom",
+        "displayName": "Azul Horizonte",
+        "canonical": "oklch(0.84 0.06 216)",
+        "tonalRamp": []
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Títulos de página principales (h1)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Títulos de tarjetas, nombres de medicamentos."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto de lectura, descripciones, contenido."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Labels de formularios, metadatos, badges."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Dosis, horas, datos estructurados."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-rest",
+        "value": "0 1px 3px 0 oklch(0 0 0 / 0.06)",
+        "purpose": "Tarjetas en estado default."
+      },
+      {
+        "name": "card-hover",
+        "value": "0 4px 12px oklch(0 0 0 / 0.08)",
+        "purpose": "Tarjetas al hacer hover."
+      },
+      {
+        "name": "modal",
+        "value": "0 8px 24px oklch(0 0 0 / 0.12)",
+        "purpose": "Modales, popovers, diálogos."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Easing estándar para transiciones de estado."
+      },
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Transiciones de hover, focus, active."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-default",
+      "description": "Botón de acción principal.",
+      "html": "<button class=\"ds-btn-primary\">Guardar medicamento</button>",
+      "css": ".ds-btn-primary { background: oklch(0.40 0.08 210); color: oklch(0.99 0 0); padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; font-family: Geist, system-ui, sans-serif; border: none; border-radius: 0.875rem; cursor: pointer; transition: opacity 0.15s ease; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 3px solid oklch(0.40 0.08 210); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Botón secundario con borde.",
+      "html": "<button class=\"ds-btn-outline\">Cancelar</button>",
+      "css": ".ds-btn-outline { background: transparent; color: oklch(0.13 0.025 210); padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; font-family: Geist, system-ui, sans-serif; border: 1px solid oklch(0.90 0.010 210); border-radius: 0.875rem; cursor: pointer; transition: background 0.15s ease; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; } .ds-btn-outline:hover { background: oklch(0.93 0.020 205); } .ds-btn-outline:focus-visible { outline: 3px solid oklch(0.40 0.08 210); outline-offset: 2px; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de texto estándar.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Ej: Losartán, Metformina...\" />",
+      "css": ".ds-input { width: 100%; height: 3rem; padding: 0 1rem; font-size: 1rem; font-family: Geist, system-ui, sans-serif; color: oklch(0.13 0.025 210); background: oklch(0.97 0.005 210); border: 1px solid oklch(0.90 0.010 210); border-radius: 1.5rem; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-input::placeholder { color: oklch(0.48 0.03 210); } .ds-input:focus { border-color: oklch(0.40 0.08 210); box-shadow: 0 0 0 3px oklch(0.40 0.08 210 / 0.2); }"
+    },
+    {
+      "name": "Card Elevated",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "Contenedor universal con borde y sombra sutil.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-content\"><p class=\"ds-card-title\">Losartán 50 mg</p><p class=\"ds-card-desc\">Una vez al día · 08:00</p></div></div>",
+      "css": ".ds-card { background: oklch(1 0 0); border: 1px solid oklch(0.90 0.010 210); border-radius: 1.5rem; padding: 1.25rem; box-shadow: 0 1px 3px 0 oklch(0 0 0 / 0.06); transition: box-shadow 0.15s ease; } .ds-card:hover { box-shadow: 0 4px 12px oklch(0 0 0 / 0.08); } .ds-card-content { display: flex; flex-direction: column; gap: 0.25rem; } .ds-card-title { font-size: 1.125rem; font-weight: 600; line-height: 1.25; color: oklch(0.13 0.025 210); letter-spacing: -0.01em; margin: 0; } .ds-card-desc { font-size: 0.875rem; color: oklch(0.48 0.03 210); margin: 0; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-default",
+      "description": "Indicador de estado compacto.",
+      "html": "<span class=\"ds-badge ds-badge-active\">Activo</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 500; border-radius: 0.875rem; white-space: nowrap; font-family: Geist, system-ui, sans-serif; } .ds-badge-active { background: oklch(0.40 0.08 210); color: oklch(0.99 0 0); } .ds-badge-warning { background: oklch(0.90 0.10 85); color: oklch(0.35 0.12 85); } .ds-badge-muted { background: oklch(0.93 0.008 210); color: oklch(0.48 0.03 210); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El Refugio Tranquilo",
+    "overview": "Kawsaymi Care es un espacio visual sereno y acogedor. La interfaz prioriza la claridad sobre la decoración, los espacios generosos sobre la densidad, y la calidez sobre la frialdad clínica.",
+    "keyCharacteristics": [
+      "Espacios amplios y tarjetas generosas (rounded-xl, shadow-sm)",
+      "Paleta fría con acentos en teal y cyan",
+      "Tipografía Geist limpia",
+      "Gradientes sutiles como detalle",
+      "Sin ruido visual"
+    ],
+    "rules": [
+      {
+        "name": "La Regla de Una Voz",
+        "body": "El acento primary (Teal Profundo) se usa en no más del 10% de cualquier pantalla.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de Escala Constante",
+        "body": "Body nunca baja de 16px. En móvil, display se reduce hasta 28px pero body se mantiene en 16px.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla de Respiración",
+        "body": "Ningún bloque de contenido ocupa más del 85% del ancho de la ventana en desktop.",
+        "section": "layout"
+      },
+      {
+        "name": "La Regla de Superficie Plana",
+        "body": "Las superficies son planas en reposo. Las sombras aparecen solo como respuesta a estado.",
+        "section": "elevation"
+      },
+      {
+        "name": "La Regla Sin Esquinas",
+        "body": "Ningún elemento interactivo o contenedor tiene un radio menor a 0.5rem.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do usar tarjetas (card-elevated) para agrupar información.",
+      "Do mantener formularios en una sola columna.",
+      "Do usar HelpTooltip en labels.",
+      "Do mantener espaciado generoso."
+    ],
+    "donts": [
+      "Don't usar sombras en botones.",
+      "Don't mezclar radios en una misma sección.",
+      "Don't usar primary para fondos grandes.",
+      "Don't superponer más de dos niveles de profundidad.",
+      "Don't usar iconos sin etiqueta textual."
+    ]
+  }
+}
