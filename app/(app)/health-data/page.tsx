@@ -297,12 +297,40 @@ export default function HealthDataPage() {
         </div>
       </div>
 
-      {!loading && poly?.polypharmacy && (
-        <div className="card-elevated p-4 border border-amber-200 bg-amber-50">
-          <p className="font-semibold text-amber-900 text-sm">Polifarmacia detectada</p>
-          <p className="text-sm text-amber-800 mt-1">
-            Estás tomando {poly.activeMedications} medicamentos activos. Consultá con tu médico para una revisión.
-          </p>
+      {!loading && poly && (
+        <div className={`card-elevated p-4 border ${
+          poly.risk === 'ALTO' ? 'border-red-200 bg-red-50' :
+          poly.risk === 'MODERADO' ? 'border-amber-200 bg-amber-50' :
+          'border-border'
+        }`}>
+          <div className="flex items-center justify-between">
+            <p className={`font-semibold text-sm ${
+              poly.risk === 'ALTO' ? 'text-red-900' :
+              poly.risk === 'MODERADO' ? 'text-amber-900' :
+              'text-muted-foreground'
+            }`}>
+              {poly.risk === 'ALTO' ? '🔴 Polifarmacia crítica' :
+               poly.risk === 'MODERADO' ? '🟡 Polifarmacia moderada' :
+               '🟢 Sin riesgo de polifarmacia'}
+            </p>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+              poly.risk === 'ALTO' ? 'bg-red-200 text-red-800' :
+              poly.risk === 'MODERADO' ? 'bg-amber-200 text-amber-800' :
+              'bg-secondary/10 text-secondary'
+            }`}>
+              {poly.activeMedications} activos
+            </span>
+          </div>
+          {poly.risk !== 'BAJO' && (
+            <p className={`text-sm mt-2 ${
+              poly.risk === 'ALTO' ? 'text-red-800' : 'text-amber-800'
+            }`}>
+              Tenés {poly.activeMedications} medicamentos activos.
+              {poly.risk === 'ALTO'
+                ? ' La polifarmacia alta (≥10) aumenta significativamente el riesgo de interacciones y efectos adversos. Revisá con tu médico.'
+                : ' La polifarmacia moderada (5-9) requiere monitoreo. Revisá periódicamente tu tratamiento.'}
+            </p>
+          )}
         </div>
       )}
 
