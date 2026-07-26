@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAdherenceStore } from '@/lib/stores/adherence-store'
-import { Home, Pill, Activity, Heart, Users, AlertCircle, Settings, LogOut, ChevronRight, User, ClipboardList, Syringe, Brain, Bell } from 'lucide-react'
+import { Home, Pill, Activity, Heart, Users, AlertCircle, Settings, LogOut, ChevronRight, User, ClipboardList, Syringe, Brain, Bell, Calendar } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,7 @@ export function Navigation() {
   const patientNav = [
     { label: 'Inicio', href: '/dashboard', icon: Home },
     { label: 'Medicamentos', href: '/medications', icon: Pill },
+    { label: 'Calendario', href: '/schedule', icon: Calendar },
     { label: 'Mis pastillas', href: '/adherence', icon: Activity },
     { label: 'Mi salud', href: '/health-data', icon: Heart },
     { label: 'Asistente IA', href: '/knowledge/chat', icon: Brain },
@@ -38,6 +39,7 @@ export function Navigation() {
   const caregiverNav = [
     { label: 'Inicio', href: '/dashboard', icon: Home },
     { label: 'Pacientes', href: '/patients', icon: Users },
+    { label: 'Calendario', href: '/schedule', icon: Calendar },
     { label: 'Alertas', href: '/alerts', icon: AlertCircle },
   ]
 
@@ -73,10 +75,10 @@ export function Navigation() {
                 <button className="w-9 h-9 rounded-xl border border-border flex items-center justify-center hover:bg-accent transition-colors">
                   <Bell className="w-4 h-4 text-foreground" />
                 </button>
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-[11px] font-bold rounded-full flex items-center justify-center">
+<span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
                   {upcomingCount}
                 </span>
-              </Link>
+            </Link>
             )}
           </div>
         </div>
@@ -154,9 +156,9 @@ export function Navigation() {
               <button className="w-10 h-10 rounded-xl border border-border flex items-center justify-center hover:bg-accent transition-colors">
                 <Bell className="w-5 h-5 text-foreground" />
               </button>
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-[11px] font-bold rounded-full flex items-center justify-center">
-                {upcomingCount}
-              </span>
+<span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                  {upcomingCount}
+                </span>
             </Link>
           )}
 
@@ -205,7 +207,7 @@ export function Navigation() {
                 <div className={`p-1.5 rounded-xl transition-colors ${active ? 'bg-primary/10' : ''}`}>
                   <Icon className="w-5 h-5" />
                 </div>
-                <span className="text-[11px] font-medium leading-none">{item.label}</span>
+                <span className="text-xs font-medium leading-none">{item.label}</span>
               </Link>
             )
           })}
@@ -218,7 +220,7 @@ export function Navigation() {
                 <div className={`p-1.5 rounded-xl transition-colors ${pathname === '/settings' ? 'bg-primary/10' : ''}`}>
                   <User className="w-5 h-5" />
                 </div>
-                <span className="text-[11px] font-medium leading-none">Perfil</span>
+                <span className="text-xs font-medium leading-none">Perfil</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" className="w-56 mb-2">

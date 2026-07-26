@@ -6,10 +6,12 @@ import { useUserData } from '@/lib/user-data-context'
 import { useAdherenceStore } from '@/lib/stores/adherence-store'
 import type { Medication, MedicationEvent, AdherenceStats } from '@/lib/api'
 import Link from 'next/link'
-import { CheckCircle2, Clock, Circle, ChevronRight, Users, AlertCircle, Activity, Heart, Pill, Sparkles, FileText } from 'lucide-react'
+import { CheckCircle2, Clock, Circle, ChevronRight, Users, AlertCircle, Activity, Heart, Pill, Sparkles, FileText, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
 import { getCachedTip, setCachedTip } from '@/lib/ai-tip-cache'
 import { useHealthContext } from '@/lib/health-context'
 
@@ -20,11 +22,11 @@ function CircularProgress({ value }: { value: number }) {
   const circ = 2 * Math.PI * r
   const offset = circ - (value / 100) * circ
   return (
-    <div className="relative w-32 h-32 flex-shrink-0">
+    <div className="relative w-32 h-32 flex-shrink-0" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100} aria-label={`${value}% de progreso`}>
       <svg width="128" height="128" viewBox="0 0 120 120" className="-rotate-90">
         <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="10" />
         <circle cx="60" cy="60" r={r} fill="none" stroke="white" strokeWidth="10" strokeLinecap="round"
-          strokeDasharray={circ} strokeDashoffset={offset} className="transition-all duration-700" />
+          strokeDasharray={circ} strokeDashoffset={offset} className="transition-all duration-700 motion-reduce:transition-none" />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-3xl font-bold text-white">{value}%</span>
@@ -271,6 +273,13 @@ function EventDoseTip({
 
 // ─── Patient Dashboard ───────────────────────────────────────────────────────
 
+function timeBasedGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Buenos días'
+  if (h < 20) return 'Buenas tardes'
+  return 'Buenas noches'
+}
+
 function PatientDashboard({ user }: { user: any }) {
   const events = useAdherenceStore((s) => s.todayEvents)
   const adherence = useAdherenceStore((s) => s.todayAdherence)
@@ -282,13 +291,34 @@ function PatientDashboard({ user }: { user: any }) {
   const subscribeToEvents = useAdherenceStore((s) => s.subscribeToEvents)
   const { medications, isLoading } = useUserData()
   const [demoTaken, setDemoTaken] = useState(false)
+  const [confirmMissed, setConfirmMissed] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => { loadToday() }, [loadToday])
   useEffect(() => { const unsub = subscribeToEvents(); return unsub }, [subscribeToEvents])
 
   const handleMark = async (id: string, action: 'taken' | 'missed') => {
-    if (action === 'taken') await markTaken(id)
-    else await markMissed(id)
+    if (action === 'taken') {
+      try {
+        await markTaken(id)
+      } catch {
+        toast.error('No se pudo registrar. Verificá tu conexión e intentá de nuevo.')
+      }
+    }
+  }
+
+  const handleMissed = (id: string, name: string) => {
+    setConfirmMissed({ id, name })
+  }
+
+  const confirmMissedDose = async () => {
+    if (!confirmMissed) return
+    setConfirmMissed(null)
+    try {
+      await markMissed(confirmMissed.id)
+      toast.success('Registrado como no tomado. Lo retomamos en la próxima dosis.')
+    } catch {
+      toast.error('No se pudo registrar. Verificá tu conexión e intentá de nuevo.')
+    }
   }
 
   const isDemoMode = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
@@ -311,7 +341,7 @@ function PatientDashboard({ user }: { user: any }) {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
       <div className="mb-6">
-        <p className="text-muted-foreground text-base">Buenos días 👋</p>
+        <p className="text-muted-foreground text-base">{timeBasedGreeting()} 👋</p>
         <h1 className="text-2xl md:text-3xl font-bold mt-0.5">{user?.name}</h1>
       </div>
 
@@ -322,8 +352,8 @@ function PatientDashboard({ user }: { user: any }) {
               <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <p className="text-white/80 text-sm font-medium mb-1">Progreso del día</p>
-                {isDemoMode && !isLoading && events.length === 0 && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/15 text-white/90">DEMO</span>
+                {process.env.NODE_ENV === 'development' && isDemoMode && !isLoading && events.length === 0 && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/15 text-white/90">DEMO</span>
                 )}
               </div>
               {!isLoading && effectiveAdherence && (
@@ -361,7 +391,7 @@ function PatientDashboard({ user }: { user: any }) {
 
       {/* Próxima toma */}
       {nextDose && (
-        <div className="card-elevated p-5 mb-6 border-l-4 border-l-primary">
+        <div className="card-elevated p-5 mb-6 bg-primary/5">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
               <Clock className="w-6 h-6" />
@@ -499,12 +529,6 @@ function PatientDashboard({ user }: { user: any }) {
                           instructions={medications.find((m) => m.id === evt.medicationId)?.instructions}
                           eventStatus={evt.status}
                         />
-                        <button
-                          onClick={() => handleMark(evt.id, 'taken')}
-                          className="bg-primary text-primary-foreground text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-primary/90 active:scale-95 transition-all"
-                        >
-                          Tomar ahora
-                        </button>
                       </div>
                     ) : (
                       <span className={`flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full ${cfg.badge}`}>
@@ -515,19 +539,25 @@ function PatientDashboard({ user }: { user: any }) {
                   </div>
                   {isDue && (
                     <div className="border-t border-border flex">
-                      <button
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleMark(evt.id, 'taken')}
-                        className="flex-1 py-3 text-sm font-semibold text-secondary hover:bg-secondary/5 transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 h-auto py-3 rounded-none text-secondary hover:bg-secondary/5"
                       >
-                        <CheckCircle2 className="w-4 h-4" /> Marcar como tomado
-                      </button>
+                        <CheckCircle2 className="w-4 h-4" /> Tomar ahora
+                      </Button>
                       <div className="w-px bg-border" />
-                      <button
-                        onClick={() => handleMark(evt.id, 'missed')}
-                        className="flex-1 py-3 text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors flex items-center justify-center gap-2"
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleMissed(evt.id, evt.medicationName ?? '')}
+                        className="flex-1 h-auto py-3 rounded-none text-destructive hover:bg-destructive/5"
                       >
                         <Circle className="w-4 h-4" /> No pude tomar
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -542,6 +572,7 @@ function PatientDashboard({ user }: { user: any }) {
       <div className="grid grid-cols-2 gap-3">
         {[
           { label: 'Mi adherencia', href: '/adherence', icon: Activity, color: 'bg-primary/10 text-primary' },
+          { label: 'Calendario', href: '/schedule', icon: CalendarDays, color: 'bg-teal-100 text-teal-700' },
           { label: 'Datos de salud', href: '/health-data', icon: Heart, color: 'bg-secondary/10 text-secondary' },
           { label: 'Antecedentes médicos', href: '/medical-background', icon: FileText, color: 'bg-amber-100 text-amber-700' },
         ].map((item) => (
@@ -555,6 +586,23 @@ function PatientDashboard({ user }: { user: any }) {
           </Link>
         ))}
       </div>
+
+      <AlertDialog open={!!confirmMissed} onOpenChange={(open) => { if (!open) setConfirmMissed(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar que no se tomó?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmMissed && (
+                <>Vas a registrar <strong>{confirmMissed.name}</strong> como no tomado. Esta información se usa para medir la adherencia al tratamiento.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmMissedDose}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -562,47 +610,113 @@ function PatientDashboard({ user }: { user: any }) {
 // ─── Caregiver Dashboard ─────────────────────────────────────────────────────
 
 function CaregiverDashboard({ user }: { user: any }) {
+  const [patients, setPatients] = useState<Array<{ id: string; name: string; adherenceRate: number; medicationCount: number; pendingToday: number }>>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('kw_token') : null
+    if (!token) { setLoading(false); return }
+
+    fetch('http://localhost:3001/caregivers/my-patients', {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then((r) => r.json()).then(async (data) => {
+      const relations = data.relations ?? []
+      const summaries = await Promise.all(
+        relations.map(async (r: any) => {
+          const p = r.patient
+          let activeMeds = 0, pendingToday = 0
+          try {
+            const [medsRes, evtsRes] = await Promise.all([
+              fetch(`http://localhost:3001/medications`, { headers: { Authorization: `Bearer ${token}` } }),
+              fetch(`http://localhost:3001/events/today`, { headers: { Authorization: `Bearer ${token}` } }),
+            ])
+            const medsData = await medsRes.json()
+            activeMeds = (medsData.medications ?? []).filter((m: any) => m.status === 'ACTIVE').length
+            const evtsData = await evtsRes.json()
+            pendingToday = (evtsData.events ?? []).filter((e: any) => e.status === 'PENDING').length
+          } catch {}
+          return { id: p.id, name: p.name, adherenceRate: 0, medicationCount: activeMeds, pendingToday }
+        })
+      )
+      setPatients(summaries)
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  const totalPending = patients.reduce((s, p) => s + p.pendingToday, 0)
+  const totalMeds = patients.reduce((s, p) => s + p.medicationCount, 0)
+
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
       <div className="mb-6">
-        <p className="text-muted-foreground text-base">Buenos días 👋</p>
+        <p className="text-muted-foreground text-base">{timeBasedGreeting()} 👋</p>
         <h1 className="text-2xl md:text-3xl font-bold mt-0.5">{user?.name}</h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="card-elevated p-5">
-          <p className="text-muted-foreground text-sm mb-1">Pacientes</p>
-          <p className="text-4xl font-bold text-primary">4</p>
-          <p className="text-sm text-muted-foreground mt-1">activos</p>
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="card-elevated p-4 text-center">
+          <p className="text-2xl font-bold text-primary">{loading ? '...' : patients.length}</p>
+          <p className="text-xs text-muted-foreground font-medium mt-0.5">Pacientes</p>
         </div>
-        <div className="card-elevated p-5">
-          <p className="text-muted-foreground text-sm mb-1">Alertas</p>
-          <p className="text-4xl font-bold text-destructive">2</p>
-          <p className="text-sm text-muted-foreground mt-1">sin revisar</p>
+        <div className="card-elevated p-4 text-center">
+          <p className="text-2xl font-bold text-secondary">{loading ? '...' : totalMeds}</p>
+          <p className="text-xs text-muted-foreground font-medium mt-0.5">Medicamentos</p>
+        </div>
+        <div className="card-elevated p-4 text-center">
+          <p className={`text-2xl font-bold ${totalPending > 0 ? 'text-amber-600' : 'text-secondary'}`}>{loading ? '...' : totalPending}</p>
+          <p className="text-xs text-muted-foreground font-medium mt-0.5">Pendientes</p>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold">Resumen de pacientes</h2>
+          <Link href="/patients" className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline">
+            Ver todos <ChevronRight className="w-3 h-3" />
+          </Link>
+        </div>
+        {loading ? (
+          <div className="space-y-3">{[1].map((i) => <div key={i} className="card-elevated h-20 animate-pulse bg-muted" />)}</div>
+        ) : patients.length === 0 ? (
+          <div className="card-elevated p-6 text-center text-muted-foreground">
+            <p className="font-medium">Sin pacientes asignados</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {patients.map((p) => (
+              <Link key={p.id} href={`/patients/${p.id}`} className="card-elevated p-4 flex items-center gap-3 hover:shadow-md transition-all active:scale-[0.98]">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm flex-shrink-0">
+                  {p.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{p.name}</p>
+                  <div className="flex gap-3 mt-0.5">
+                    <span className="text-xs text-muted-foreground">{p.medicationCount} medicamentos</span>
+                    <span className="text-xs text-muted-foreground">{p.pendingToday > 0 ? `${p.pendingToday} pendiente(s)` : 'sin pendientes'}</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <h2 className="text-lg font-bold mb-3">Accesos rápidos</h2>
+      <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'Mis pacientes', desc: 'Ver estado y adherencia', href: '/patients', icon: Users, color: 'bg-primary/10 text-primary' },
-          { label: 'Alertas', desc: '2 alertas pendientes', href: '/alerts', icon: AlertCircle, color: 'bg-destructive/10 text-destructive', badge: 2 },
+          { label: 'Mis pacientes', href: '/patients', icon: Users, color: 'bg-primary/10 text-primary' },
+          { label: 'Calendario', href: '/schedule', icon: CalendarDays, color: 'bg-teal-100 text-teal-700' },
+          { label: 'Alertas', href: '/alerts', icon: AlertCircle, color: 'bg-destructive/10 text-destructive' },
+          { label: 'Configuración', href: '/settings', icon: Heart, color: 'bg-amber-100 text-amber-700' },
         ].map((item) => (
           <Link key={item.href} href={item.href}
-            className="card-elevated p-5 flex items-center gap-4 hover:shadow-md transition-all active:scale-[0.98] block"
+            className="card-elevated p-4 flex items-center gap-3 hover:shadow-md transition-all active:scale-[0.98]"
           >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${item.color}`}>
-              <item.icon className="w-6 h-6" />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${item.color}`}>
+              <item.icon className="w-5 h-5" />
             </div>
-            <div className="flex-1">
-              <p className="font-bold text-base">{item.label}</p>
-              <p className="text-sm text-muted-foreground">{item.desc}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {item.badge && (
-                <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-0.5 rounded-full">{item.badge}</span>
-              )}
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </div>
+            <span className="font-semibold text-sm">{item.label}</span>
           </Link>
         ))}
       </div>
