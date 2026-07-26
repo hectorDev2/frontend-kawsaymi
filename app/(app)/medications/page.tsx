@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2, XCircle, Clock, Plus, Search, Pill, Sparkles } from 'lucide-react'
+import { CheckCircle2, XCircle, Clock, Plus, Search, Pill, AlertTriangle, Pencil, MoreHorizontal } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -21,6 +21,12 @@ const PILL_COLORS = [
   'bg-pink-50 text-pink-700 border-pink-200',
 ]
 
+const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
+  ACTIVE: { label: 'Activo', class: 'bg-secondary/10 text-secondary' },
+  SUSPENDED: { label: 'Suspendido', class: 'bg-amber-100 text-amber-700' },
+  COMPLETED: { label: 'Finalizado', class: 'bg-muted text-muted-foreground' },
+}
+
 function pillColor(id: string) {
   const sum = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
   return PILL_COLORS[sum % PILL_COLORS.length]
@@ -37,126 +43,6 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
-function MedicationTip({
-  medicationId,
-  medicationName,
-  dose,
-}: {
-  medicationId?: string
-  medicationName: string
-  dose: string
-}) {
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [suggestion, setSuggestion] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const healthContext = useHealthContext()
-
-  const loadTip = async (opts?: { force?: boolean }) => {
-    const key = buildTipCacheKey({ medicationId, medicationName, dose })
-    if (!opts?.force) {
-      const cached = getCachedTip(key)
-      if (cached) {
-        setSuggestion(cached)
-        setError(null)
-        return
-      }
-    }
-
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/ai-suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          medicationName,
-          dose,
-          intent: 'card-tip',
-          userContext: healthContext,
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || 'No se pudo generar la sugerencia')
-      const text = (data?.suggestion ?? '').toString().trim()
-      const finalText = text || 'No pude generar una sugerencia por ahora.'
-      setSuggestion(finalText)
-      setCachedTip(key, finalText)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Error de conexión'
-      const friendly =
-        msg.includes('401') || msg.toLowerCase().includes('unauthorized')
-          ? 'Necesitas iniciar sesión para generar el tip.'
-          : msg.includes('502') || msg.includes('503')
-          ? 'El servicio de IA está temporalmente no disponible. Intenta de nuevo en unos minutos.'
-          : msg
-      setError(friendly)
-      setSuggestion(null)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const onOpenChange = (next: boolean) => {
-    setOpen(next)
-    if (next && !suggestion && !loading && !error) loadTip()
-  }
-
-  return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <Tooltip>
-        <PopoverTrigger asChild>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="rounded-full"
-              aria-label={`Ver tip para ${medicationName}`}
-            >
-              <Sparkles className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-        </PopoverTrigger>
-        <TooltipContent sideOffset={6}>Ver tip</TooltipContent>
-      </Tooltip>
-      <PopoverContent align="end" className="w-80">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold leading-tight">Tip</p>
-            <p className="text-xs text-muted-foreground">Para {medicationName}</p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2"
-            disabled={loading}
-            onClick={() => loadTip({ force: true })}
-          >
-            {loading ? 'Generando...' : 'Otro'}
-          </Button>
-        </div>
-
-        <div className="mt-3 text-sm text-foreground">
-          {loading ? (
-            <p className="text-muted-foreground">Generando tip...</p>
-          ) : error ? (
-            <p className="text-destructive">{error}</p>
-          ) : (
-            <div className="space-y-2">
-              <p className="leading-relaxed">{suggestion}</p>
-              <p className="text-xs text-muted-foreground">
-                Sugerencia generada con política de fuentes oficiales MINSA / OMS.
-              </p>
-            </div>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
 type EventStatus = 'PENDING' | 'TAKEN' | 'MISSED'
 
 const STATUS_LABEL: Record<EventStatus, string> = {
@@ -165,43 +51,30 @@ const STATUS_LABEL: Record<EventStatus, string> = {
   MISSED: 'Perdido',
 }
 
-interface MedWithEvents {
-  med: Medication
-  events: MedicationEvent[]
-  dominantStatus: EventStatus
-}
-
-function getDominant(events: MedicationEvent[]): EventStatus {
-  if (events.some((e) => e.status === 'PENDING')) return 'PENDING'
-  if (events.every((e) => e.status === 'TAKEN')) return 'TAKEN'
-  return 'MISSED'
-}
-
 export default function MedicationsPage() {
   const [search, setSearch] = useState('')
-  const [items, setItems] = useState<MedWithEvents[]>([])
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [medications, setMedications] = useState<Medication[]>([])
+  const [todayEvents, setTodayEvents] = useState<MedicationEvent[]>([])
+  const [polyInfo, setPolyInfo] = useState<{ activeMedications: number; level: string; risk: string } | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const load = async (opts?: { initial?: boolean }) => {
-    if (opts?.initial) setLoading(true)
-    const [medRes, evtRes] = await Promise.all([api.getMedications(), api.getTodayEvents()])
-    const active = (medRes.medications ?? []).filter((m: Medication) => m.status === 'ACTIVE')
-    const todayEvents: MedicationEvent[] = evtRes.events ?? []
-
-    const combined: MedWithEvents[] = active.map((med: Medication) => {
-      const events = todayEvents.filter((e) => e.medicationId === med.id)
-      return { med, events, dominantStatus: events.length ? getDominant(events) : 'PENDING' }
-    })
-    setItems(combined)
+  const load = async () => {
+    const [medRes, evtRes, polyRes] = await Promise.all([
+      api.getMedications(),
+      api.getTodayEvents(),
+      api.getPolypharmacy().catch(() => null),
+    ])
+    setMedications(medRes.medications ?? [])
+    setTodayEvents(evtRes.events ?? [])
+    if (polyRes) setPolyInfo(polyRes)
     setLoading(false)
   }
 
   useEffect(() => {
-    load({ initial: true })
+    load()
     const off = onDataChanged((type) => {
-      if (type === 'medications' || type === 'events') {
-        load().catch(() => {})
-      }
+      if (type === 'medications' || type === 'events') load()
     })
     return off
   }, [])
@@ -210,22 +83,25 @@ export default function MedicationsPage() {
     const fn = action === 'taken' ? api.markEventTaken : api.markEventMissed
     await fn(eventId)
     const evtRes = await api.getTodayEvents()
-    const todayEvents: MedicationEvent[] = evtRes.events ?? []
-    setItems((prev) =>
-      prev.map(({ med, events }) => {
-        const updated = todayEvents.filter((e) => e.medicationId === med.id)
-        return { med, events: updated, dominantStatus: updated.length ? getDominant(updated) : 'PENDING' }
-      })
-    )
+    setTodayEvents(evtRes.events ?? [])
   }
 
-  const filtered = items.filter((i) =>
-    i.med.name.toLowerCase().includes(search.toLowerCase())
-  )
+  const handleStatusChange = async (medId: string, newStatus: string) => {
+    await api.patchMedicationStatus(medId, newStatus as any)
+    load()
+  }
 
-  const taken = items.filter((i) => i.dominantStatus === 'TAKEN').length
-  const pending = items.filter((i) => i.dominantStatus === 'PENDING').length
-  const missed = items.filter((i) => i.dominantStatus === 'MISSED').length
+  const filtered = medications.filter((m) => {
+    const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase())
+    const matchesStatus = !statusFilter || m.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  const activeMeds = medications.filter((m) => m.status === 'ACTIVE')
+  const activeEvents = todayEvents.filter((e) =>
+    activeMeds.some((m) => m.id === e.medicationId)
+  )
+  const takenCount = activeEvents.filter((e) => e.status === 'TAKEN').length
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
@@ -233,7 +109,7 @@ export default function MedicationsPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Mis medicamentos</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {loading ? '...' : `${taken} de ${items.length} tomados hoy`}
+            {loading ? '...' : `${takenCount} de ${activeEvents.length} tomados hoy`}
           </p>
         </div>
         <Link href="/medications/new">
@@ -248,20 +124,43 @@ export default function MedicationsPage() {
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="card-elevated p-4 text-center">
           <CheckCircle2 className="w-6 h-6 text-secondary mx-auto mb-1" />
-          <p className="text-2xl font-bold text-secondary">{loading ? '–' : taken}</p>
-          <p className="text-xs text-muted-foreground font-medium">Tomados</p>
+          <p className="text-2xl font-bold text-secondary">{loading ? '–' : activeEvents.filter((e) => e.status === 'TAKEN').length}</p>
+          <p className="text-xs text-muted-foreground font-medium">Tomados hoy</p>
         </div>
         <div className="card-elevated p-4 text-center">
-          <Clock className="w-6 h-6 text-amber-500 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-amber-600">{loading ? '–' : pending}</p>
-          <p className="text-xs text-muted-foreground font-medium">Pendientes</p>
+          <Pill className="w-6 h-6 text-primary mx-auto mb-1" />
+          <p className="text-2xl font-bold text-primary">{loading ? '–' : activeMeds.length}</p>
+          <p className="text-xs text-muted-foreground font-medium">Activos</p>
         </div>
         <div className="card-elevated p-4 text-center">
-          <XCircle className="w-6 h-6 text-destructive mx-auto mb-1" />
-          <p className="text-2xl font-bold text-destructive">{loading ? '–' : missed}</p>
-          <p className="text-xs text-muted-foreground font-medium">Perdidos</p>
+          <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+          <p className="text-2xl font-bold text-amber-600">{loading ? '–' : medications.filter((m) => m.status !== 'ACTIVE').length}</p>
+          <p className="text-xs text-muted-foreground font-medium">Inactivos</p>
         </div>
       </div>
+
+      {/* Polifarmacia */}
+      {polyInfo && (
+        <div className={`card-elevated p-4 mb-5 flex items-center justify-between ${
+          polyInfo.risk === 'ALTO' ? 'bg-destructive/5' :
+          polyInfo.risk === 'MODERADO' ? 'bg-amber-50' :
+          'bg-secondary/5'
+        }`}>
+          <div>
+            <p className="text-sm font-semibold">Polifarmacia</p>
+            <p className="text-xs text-muted-foreground">
+              {polyInfo.activeMedications} medicamento{polyInfo.activeMedications !== 1 ? 's' : ''} activo{polyInfo.activeMedications !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+            polyInfo.risk === 'ALTO' ? 'bg-destructive/10 text-destructive' :
+            polyInfo.risk === 'MODERADO' ? 'bg-amber-100 text-amber-700' :
+            'bg-secondary/10 text-secondary'
+          }`}>
+            {polyInfo.risk === 'ALTO' ? 'Alto' : polyInfo.risk === 'MODERADO' ? 'Moderado' : 'Bajo'}
+          </span>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative mb-5">
@@ -274,6 +173,21 @@ export default function MedicationsPage() {
         />
       </div>
 
+      {/* Filter tabs */}
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+        {[{ label: 'Todos', filter: null }, { label: 'Activos', filter: 'ACTIVE' }, { label: 'Suspendidos', filter: 'SUSPENDED' }, { label: 'Finalizados', filter: 'COMPLETED' }].map((tab) => {
+          const active = statusFilter === tab.filter
+          return (
+            <button key={tab.label} onClick={() => { setStatusFilter(tab.filter); setSearch('') }}
+              className={`whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-lg border transition-colors ${
+                active ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-accent'
+              }`}>
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* List */}
       {loading ? (
         <div className="space-y-4">
@@ -284,87 +198,143 @@ export default function MedicationsPage() {
       ) : filtered.length === 0 ? (
         <div className="card-elevated p-12 text-center">
           <Pill className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground font-medium">
-            {search ? 'No se encontraron resultados' : 'Sin medicamentos activos'}
-          </p>
-          {!search && (
-            <Link href="/medications/new" className="text-primary font-semibold text-sm hover:underline mt-2 block">
-              Agregar medicamento
-            </Link>
-          )}
+          <p className="text-muted-foreground font-medium">Sin medicamentos</p>
+          <Link href="/medications/new" className="text-primary font-semibold text-sm hover:underline mt-2 block">
+            Agregar medicamento
+          </Link>
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map(({ med, events, dominantStatus }) => {
-            const pendingEvents = events.filter((e) => e.status === 'PENDING')
+          {filtered.map((med) => {
+            const events = todayEvents.filter((e) => e.medicationId === med.id)
+            const isActive = med.status === 'ACTIVE'
             const color = pillColor(med.id)
+            const statusCfg = STATUS_CONFIG[med.status] ?? STATUS_CONFIG.ACTIVE
             return (
-              <div
-                key={med.id}
-                className={`card-elevated border overflow-hidden ${dominantStatus === 'TAKEN' ? 'opacity-70' : ''}`}
-              >
+              <div key={med.id} className={`card-elevated border overflow-hidden ${!isActive ? 'opacity-70' : ''}`}>
                 <div className="p-5 flex items-start gap-4">
                   <div className={`w-12 h-12 rounded-xl border flex items-center justify-center flex-shrink-0 ${color}`}>
                     <Pill className="w-6 h-6" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-bold text-lg leading-tight">{med.name}</p>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-lg leading-tight truncate">{med.name}</p>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusCfg.class}`}>
+                            {statusCfg.label}
+                          </span>
+                        </div>
                         <p className="text-base text-muted-foreground">{med.dose} · {freqLabel(med.frequency)}</p>
+                        {med.reasonForPrescription && (
+                          <p className="text-xs text-muted-foreground mt-0.5">Motivo: {med.reasonForPrescription}</p>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                          dominantStatus === 'TAKEN'
-                            ? 'bg-secondary/10 text-secondary'
-                            : dominantStatus === 'MISSED'
-                            ? 'bg-destructive/10 text-destructive'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {STATUS_LABEL[dominantStatus]}
-                        </span>
-                        <MedicationTip medicationId={med.id} medicationName={med.name} dose={med.dose} />
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {isActive && events.length > 0 && (
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                            events.every((e) => e.status === 'TAKEN')
+                              ? 'bg-secondary/10 text-secondary'
+                              : events.some((e) => e.status === 'MISSED')
+                              ? 'bg-destructive/10 text-destructive'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {events.every((e) => e.status === 'TAKEN')
+                              ? 'Completado'
+                              : events.some((e) => e.status === 'MISSED')
+                              ? 'Perdido'
+                              : 'Pendiente'}
+                          </span>
+                        )}
+                        <Link href={`/medications/${med.id}`}>
+                          <Button type="button" variant="ghost" size="icon-sm" className="rounded-full" aria-label="Editar">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon-sm" className="rounded-full">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" className="w-44 p-2">
+                            <div className="space-y-1">
+                              <p className="text-xs font-semibold text-muted-foreground px-2 py-1">Cambiar estado</p>
+                              {['ACTIVE', 'SUSPENDED', 'COMPLETED'].map((s) => (
+                                s !== med.status && (
+                                  <button key={s} onClick={() => handleStatusChange(med.id, s)}
+                                    className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors">
+                                    {STATUS_CONFIG[s]?.label ?? s}
+                                  </button>
+                                )
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
                     {events.length > 0 && (
                       <div className="flex gap-2 mt-2 flex-wrap">
                         {events.map((e) => (
-                          <span key={e.id} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">
+                          <span key={e.id} className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${
+                            e.status === 'TAKEN' ? 'bg-secondary/10 text-secondary' :
+                            e.status === 'MISSED' ? 'bg-destructive/10 text-destructive' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
                             🕐 {formatTime(e.dateTimeScheduled)}
                           </span>
                         ))}
                       </div>
                     )}
+                    {isActive && events.length > 0 && (() => {
+                      const taken = events.filter((e) => e.status === 'TAKEN').length
+                      const pct = Math.round((taken / events.length) * 100)
+                      return (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${
+                              pct === 100 ? 'bg-secondary' : pct >= 50 ? 'bg-amber-500' : 'bg-destructive'
+                            }`} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className={`text-xs font-semibold ${
+                            pct === 100 ? 'text-secondary' : pct >= 50 ? 'text-amber-600' : 'text-destructive'
+                          }`}>
+                            {taken}/{events.length}
+                          </span>
+                        </div>
+                      )
+                    })()}
                     {med.instructions && (
                       <p className="text-sm text-muted-foreground mt-1.5 italic">{med.instructions}</p>
                     )}
                   </div>
                 </div>
 
-                {pendingEvents.length > 0 && (
-                  <div className="border-t border-border flex">
-                    <button
-                      onClick={() => handleMark(pendingEvents[0].id, 'taken')}
-                      className="flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold text-secondary hover:bg-secondary/5 transition-colors"
-                    >
-                      <CheckCircle2 className="w-5 h-5" />
-                      Marcar como tomado
-                    </button>
-                    <div className="w-px bg-border" />
-                    <button
-                      onClick={() => handleMark(pendingEvents[0].id, 'missed')}
-                      className="flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors"
-                    >
-                      <XCircle className="w-5 h-5" />
-                      No pude tomar
-                    </button>
-                  </div>
-                )}
+                {/* Action buttons for ACTIVE medications with pending events */}
+                {isActive && (() => {
+                  const pendingEvent = events.find((e) => e.status === 'PENDING')
+                  if (!pendingEvent) return null
+                  return (
+                    <div className="border-t border-border flex">
+                      <button onClick={() => handleMark(pendingEvent.id, 'taken')}
+                        className="flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold text-secondary hover:bg-secondary/5 transition-colors">
+                        <CheckCircle2 className="w-5 h-5" />
+                        Marcar tomado
+                      </button>
+                      <div className="w-px bg-border" />
+                      <button onClick={() => handleMark(pendingEvent.id, 'missed')}
+                        className="flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors">
+                        <XCircle className="w-5 h-5" />
+                        No pude tomar
+                      </button>
+                    </div>
+                  )
+                })()}
 
-                {dominantStatus === 'TAKEN' && (
+                {isActive && events.length > 0 && events.every((e) => e.status === 'TAKEN') && (
                   <div className="border-t border-border px-5 py-3 flex items-center gap-2 text-secondary bg-secondary/5">
                     <CheckCircle2 className="w-5 h-5" />
-                    <p className="text-sm font-semibold">¡Perfecto! Ya tomaste este medicamento</p>
+                    <p className="text-sm font-semibold">¡Perfecto! Ya tomaste este medicamento hoy</p>
                   </div>
                 )}
               </div>
