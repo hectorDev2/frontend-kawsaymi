@@ -6,12 +6,12 @@ import { useEffect } from 'react'
 import { Navigation } from '@/components/navigation'
 import { HealthContextProvider } from '@/lib/health-context'
 import { useDoseNotifier } from '@/hooks/use-dose-notifier'
+import { AlertTriangle, X } from 'lucide-react'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
-
-  useDoseNotifier()
+  const { alarmingEvents, snoozeAlarm } = useDoseNotifier()
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -35,8 +35,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <HealthContextProvider>
       <div className="flex min-h-screen flex-col bg-background">
+        {alarmingEvents.length > 0 && (
+          <div className="sticky top-0 z-50 bg-destructive/10 border-b border-destructive/20 px-4 py-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+              <AlertTriangle className="w-4 h-4" />
+              <span>{alarmingEvents.length} dosis {alarmingEvents.length === 1 ? 'está' : 'están'} por tomar</span>
+            </div>
+            <button
+              onClick={snoozeAlarm}
+              className="text-xs font-semibold bg-destructive/20 hover:bg-destructive/30 text-destructive px-3 py-1 rounded-lg transition-colors flex items-center gap-1"
+            >
+              <X className="w-3 h-3" /> Posponer
+            </button>
+          </div>
+        )}
         <Navigation />
-        {/* md:pl-64 por el sidebar desktop | pb-24 por el bottom nav mobile */}
         <main className="flex-1 md:pl-64 pb-24 md:pb-0">
           {children}
         </main>
