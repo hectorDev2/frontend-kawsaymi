@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import { User, Bell, Lock, LogOut, Save, Heart, MapPin, Calendar, Loader2 } from 'lucide-react'
 import type { UserProfile } from '@/lib/api'
 
-const ALLERGIES = ['Penicilina', 'Ibuprofeno', 'Aspirina', 'Mariscos', 'Nueces', 'Látex', 'Polen', 'Gluten']
+const ALLERGIES = ['Penicilina', 'Ibuprofeno', 'Aspirina', 'Maní', 'Mariscos', 'Nueces', 'Látex', 'Polen', 'Gluten']
 
 const LANGUAGES = [
   { value: 'es', label: 'Español' },

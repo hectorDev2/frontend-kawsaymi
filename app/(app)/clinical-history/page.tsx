@@ -16,6 +16,7 @@ const CLINICAL_STORAGE_KEY = 'kw_clinical_history:v1'
 const CHRONIC_DISEASES = [
   'Hipertensión',
   'Diabetes',
+  'Gastritis',
   'Asma',
   'EPOC',
   'Artritis',

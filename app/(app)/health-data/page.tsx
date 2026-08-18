@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import type { HealthProfile, PolypharmacyInfo } from '@/lib/api'
+import type { HealthProfile, PolypharmacyInfo, UserProfile } from '@/lib/api'
 import { useHealthContext } from '@/lib/health-context'
 import {
   DEFAULT_WELLNESS_FORM,
@@ -23,6 +23,12 @@ import {
   type MealKey,
   type WellnessFormState,
 } from '@/lib/wellness-plan'
+import {
+  evaluateMealSelection,
+  summarizeDailyNutrition,
+  type NutritionEvaluation,
+  type NutritionProfile,
+} from '@/lib/nutrition-context'
 
 const WELLNESS_STORAGE_KEY = 'kw_wellness_planner:v1'
 const HEIGHT_STORAGE_KEY = 'kw_health_height:v1'
@@ -33,6 +39,65 @@ const MEAL_ICONS = {
   dinner: Moon,
   snack: Cookie,
 } satisfies Record<MealKey, typeof Coffee>
+
+const NUTRITION_RULE_LABELS: Record<string, string> = {
+  'allergy.peanut': 'Alergia alimentaria → posible presencia de maní',
+  'allergy.tree-nuts': 'Alergia alimentaria → posible presencia de frutos secos',
+  'allergy.shellfish': 'Alergia alimentaria → posible presencia de mariscos',
+  'allergy.gluten': 'Alergia alimentaria → posible presencia de gluten',
+  'diabetes.added-sugars': 'Diabetes → limitar azúcares añadidos',
+  'diabetes.refined-carbs': 'Diabetes → preferir carbohidratos con más fibra',
+  'hypertension.sodium-processed': 'Hipertensión → reducir sodio y procesados',
+  'gastritis.irritants': 'Gastritis → considerar irritantes según tolerancia',
+}
+
+const NUTRITION_GUIDANCE_TONES: Record<NutritionEvaluation['level'], string> = {
+  adecuado: 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-50',
+  mejorable: 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-50',
+  precaucion: 'border-orange-200 bg-orange-50 text-orange-950 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-50',
+  alerta: 'border-red-300 bg-red-50 text-red-950 dark:border-red-900 dark:bg-red-950/30 dark:text-red-50',
+  consulta: 'border-red-300 bg-red-50 text-red-950 dark:border-red-900 dark:bg-red-950/30 dark:text-red-50',
+}
+
+function storedMedicalHistory(): string {
+  if (typeof window === 'undefined') return ''
+
+  try {
+    const saved = window.localStorage.getItem('kw_clinical_history:v1')
+    if (!saved) return ''
+    const clinical = JSON.parse(saved) as { antecedentes?: string; enfermedades?: string[] }
+    return [clinical.antecedentes, ...(clinical.enfermedades ?? [])].filter(Boolean).join('. ')
+  } catch {
+    return ''
+  }
+}
+
+function NutritionGuidance({ evaluation, daily = false }: { evaluation: NutritionEvaluation; daily?: boolean }) {
+  return (
+    <div
+      className={`rounded-xl border p-3 space-y-2 ${NUTRITION_GUIDANCE_TONES[evaluation.level]}`}
+      role={evaluation.level === 'alerta' || evaluation.level === 'consulta' ? 'alert' : undefined}
+      aria-live="polite"
+    >
+      <p className="text-xs font-bold tracking-wide">{daily ? 'RESUMEN DEL DÍA · ' : ''}{evaluation.title}</p>
+      <p className="text-sm leading-relaxed">{evaluation.message}</p>
+      {evaluation.suggestions.length > 0 && (
+        <ul className="space-y-1 text-sm leading-relaxed list-disc pl-5">
+          {evaluation.suggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>)}
+        </ul>
+      )}
+      <p className="text-xs leading-relaxed opacity-85">{evaluation.consultation}</p>
+      {evaluation.triggeredRules.length > 0 && (
+        <details className="text-xs">
+          <summary className="cursor-pointer font-semibold">Ver por qué recibís esta orientación</summary>
+          <ul className="mt-1 list-disc pl-5 space-y-1">
+            {evaluation.triggeredRules.map((rule) => <li key={rule}>{NUTRITION_RULE_LABELS[rule] ?? rule}</li>)}
+          </ul>
+        </details>
+      )}
+    </div>
+  )
+}
 
 function imcCategory(imc: number) {
   if (imc < 18.5) return { label: 'Desnutrición', tone: 'text-destructive' }
@@ -145,6 +210,7 @@ export default function HealthDataPage() {
   const [weight, setWeight] = useState('')
   const [height, setHeight] = useState('')
   const [wellness, setWellness] = useState<WellnessFormState>(DEFAULT_WELLNESS_FORM)
+  const [nutritionProfile, setNutritionProfile] = useState<NutritionProfile>({})
 
   const imcPreview = useMemo(() => {
     const w = Number.parseFloat(weight)
@@ -163,16 +229,37 @@ export default function HealthDataPage() {
     [health?.weight, heightNum, imcValue, wellness],
   )
 
+  const mealGuidance = useMemo(() => (
+    Object.fromEntries(MEAL_CONFIG.map((meal) => [
+      meal.key,
+      evaluateMealSelection({
+        meal: meal.key,
+        foods: wellness.nutrition[meal.key],
+        profile: nutritionProfile,
+      }),
+    ])) as Record<MealKey, NutritionEvaluation>
+  ), [nutritionProfile, wellness.nutrition])
+
+  const dailyNutritionSummary = useMemo(
+    () => summarizeDailyNutrition(wellness.nutrition, nutritionProfile),
+    [nutritionProfile, wellness.nutrition],
+  )
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedHeight = window.localStorage.getItem(HEIGHT_STORAGE_KEY)
       if (savedHeight) setHeight(savedHeight)
     }
 
-    Promise.all([api.getHealthProfile(), api.getPolypharmacy()])
-      .then(([hRes, p]) => {
+    Promise.all([api.getHealthProfile(), api.getPolypharmacy(), api.getMe().catch(() => ({ user: {} as UserProfile }))])
+      .then(([hRes, p, meRes]) => {
         setHealth(hRes.health)
         setPoly(p)
+        setNutritionProfile({
+          conditions: meRes.user.conditions ?? [],
+          allergies: meRes.user.allergies ?? [],
+          medicalHistory: storedMedicalHistory(),
+        })
         if (hRes.health.weight) setWeight(String(hRes.health.weight))
         if (hRes.health.height) {
           const h = String(hRes.health.height)
@@ -404,11 +491,21 @@ export default function HealthDataPage() {
                       onChange={(e) => updateMeal(meal.key, e.target.value)}
                       className="text-base min-h-[88px]"
                     />
+                    {wellness.nutrition[meal.key].trim() && (
+                      <NutritionGuidance evaluation={mealGuidance[meal.key]} />
+                    )}
                   </div>
                 )
               })}
 
-              <p className="text-sm text-muted-foreground mt-4">💡 Usá el ícono <span className="text-secondary">❓</span> para recibir sugerencias alineadas con hábitos saludables.</p>
+              {dailyNutritionSummary && dailyNutritionSummary.mealsRegistered >= 2 && (
+                <NutritionGuidance evaluation={dailyNutritionSummary} daily />
+              )}
+
+              <div className="text-sm text-muted-foreground mt-4 space-y-1">
+                <p>💡 La orientación se actualiza con cada comida y considera las condiciones o alergias relevantes que registraste.</p>
+                <p>Es educativa: no diagnostica ni reemplaza la indicación de tu nutricionista o profesional de salud.</p>
+              </div>
             </div>
           </section>
 
